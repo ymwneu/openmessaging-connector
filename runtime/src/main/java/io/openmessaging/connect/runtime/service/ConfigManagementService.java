@@ -1,8 +1,34 @@
-package io.openmessaging.connect.runtime.store;
+package io.openmessaging.connect.runtime.service;
 
-public interface ConfigBackingStore {
+import io.openmessaging.KeyValue;
+import java.util.List;
+import java.util.Map;
 
-    interface ConfigUpdateListener{
+public interface ConfigManagementService {
+
+    void start();
+
+    void stop();
+
+    Map<String, KeyValue> getConnectorConfigs();
+
+    void putConnectorConfig(String connectorName, KeyValue configs);
+
+    void removeConnectorConfig(String connectorName);
+
+    Map<String, List<KeyValue>> getTaskConfigs();
+
+    void putTaskConfigs(String connectorName, List<KeyValue> configs);
+
+    void removeTaskConfigs(String connectorName);
+
+    void persist();
+
+    interface ConnectorConfigUpdateListener {
+        void onConfigUpdate();
+    }
+
+    interface TaskConfigUpdateListener {
         void onConfigUpdate();
     }
 }

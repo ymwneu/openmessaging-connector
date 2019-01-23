@@ -1,12 +1,24 @@
 package io.openmessaging.connector.api.sink;
 
-public class Partition {
+public class OMSQueue {
 
     /**
-     *
+     * namespace of a queue
+     */
+    private String namespace;
+
+    /**
+     * target queue to send/fetch message
      */
     private String queueName;
-    private String key;
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
 
     public String getQueueName() {
         return queueName;
@@ -14,13 +26,5 @@ public class Partition {
 
     public void setQueueName(String queueName) {
         this.queueName = queueName;
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
     }
 }

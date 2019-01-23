@@ -1,4 +1,7 @@
 package io.openmessaging.connect.runtime.utils;
 
-public interface Convertor {
+public interface Converter {
+
+    byte[] objectToByte(Object object);
+    Object byteToObject(byte[] bytes);
 }

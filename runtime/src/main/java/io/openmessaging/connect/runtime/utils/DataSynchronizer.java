@@ -1,6 +1,10 @@
 package io.openmessaging.connect.runtime.utils;
 
-public class DataSynchronizer<K, V> {
+public interface DataSynchronizer<K, V> {
 
-    public void send(Key );
+    void start(Callback<K, V> callback);
+
+    void stop();
+
+    void send(K key, V value);
 }

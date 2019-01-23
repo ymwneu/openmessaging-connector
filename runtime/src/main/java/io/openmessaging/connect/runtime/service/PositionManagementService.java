@@ -1,8 +1,9 @@
 package io.openmessaging.connect.runtime.service;
 
+import java.util.List;
 import java.util.Map;
 
-public interface OffsetManagementService {
+public interface PositionManagementService {
 
     void start();
 
@@ -12,7 +13,7 @@ public interface OffsetManagementService {
 
     Map<Map<String, ?>, Map<String, ?>> getPositionTable();
 
-    void putPosition(Map<String, ?> partition, Map<String, ?> position);
+    void putPosition(Map<Map<String, ?>, Map<String, ?>> positions);
 
-    void removePosition(Map<String, ?> partition);
+    void removePosition(List<Map<String, ?>> partitions);
 }

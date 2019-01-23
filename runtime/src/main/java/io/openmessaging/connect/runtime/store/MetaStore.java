@@ -1,4 +1,12 @@
 package io.openmessaging.connect.runtime.store;
 
-public class MetaStore {
+public interface MetaStore<T> {
+
+    T getData();
+
+    void setData(T data);
+
+    boolean load();
+
+    void persist();
 }

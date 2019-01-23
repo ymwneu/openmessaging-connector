@@ -1,12 +1,10 @@
 package io.openmessaging.connector.api;
 
-import java.util.Map;
+import io.openmessaging.KeyValue;
 
 public interface Task {
 
-    void start(Map<String, String> props);
+    void start(KeyValue props);
 
     void stop();
-
-    Map<String, String> getCurrentConfigs();
 }

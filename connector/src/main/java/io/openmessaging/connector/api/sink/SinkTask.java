@@ -1,17 +1,22 @@
-package io.openmessaging.connector.api;
+package io.openmessaging.connector.api.sink;
 
+import io.openmessaging.connector.api.Task;
 import java.util.Collection;
 
-public abstract class SinkTask implements Task{
+public abstract class SinkTask implements Task {
 
     protected SinkTaskContext context;
 
+    /**
+     * Initialize this sinkTask.
+     * @param context
+     */
     public void initialize(SinkTaskContext context) {
         this.context = context;
     }
 
     /**
-     * put the messages in the sink.
+     * put the data entries to the sink.
      * */
-    abstract void put(Collection<ConnectRecord> message);
+    abstract void put(Collection<SinkDataEntry> message);
 }

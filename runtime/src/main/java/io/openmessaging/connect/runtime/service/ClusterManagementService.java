@@ -1,7 +1,14 @@
 package io.openmessaging.connect.runtime.service;
 
-public interface HeartBeatService {
+import java.util.Set;
 
+public interface ClusterManagementService {
+
+    void start();
+
+    void stop();
+
+    Set<String> getAllAliveWorkers();
     interface WorkerStatusListener {
 
         void onWorkerChange();

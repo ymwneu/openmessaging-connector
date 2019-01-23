@@ -1,15 +1,33 @@
-package io.openmessaging.connector.api;
+package io.openmessaging.connector.api.sink;
 
+import io.openmessaging.connector.api.TaskContext;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public interface SinkTaskContext extends TaskContext {
 
-    void resetOffset(String queueName, Long offset);
+    /**
+     * Reset the consumer offset for the given queue.
+     * @param OMSQueue
+     * @param offset
+     */
+    void resetOffset(OMSQueue OMSQueue, Long offset);
 
-    void resetOffset(Map<String, Long> offsets);
+    /**
+     * Reset the consumer offsets for the given queue.
+     * @param offsets
+     */
+    void resetOffset(Map<OMSQueue, Long> offsets);
 
-    Set<String> getAssignedQueueSet();
+    /**
+     * Pause consumption of messages from the specified TopicPartitions.
+     * @param OMSQueues
+     */
+    void pause(List<OMSQueue> OMSQueues);
 
-    // pause, resume
+    /**
+     * Resume consumption of messages from previously paused TopicPartitions.
+     * @param OMSQueues
+     */
+    void resume(List<OMSQueue> OMSQueues);
 }

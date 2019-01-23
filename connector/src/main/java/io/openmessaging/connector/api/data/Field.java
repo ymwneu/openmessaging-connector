@@ -1,14 +1,39 @@
-package io.openmessaging.connector.api;
+package io.openmessaging.connector.api.data;
 
 public class Field {
 
-    private String name;
     private int index;
-    private Schema schema;
+    private String name;
+    private String type;
 
-    public Field(String name, int index, Schema schema) {
-        this.name = name;
+    public Field(int index, String name, String type) {
+
         this.index = index;
-        this.schema = schema;
+        this.name = name;
+        this.type = type;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }
