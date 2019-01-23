@@ -1,15 +1,16 @@
 package io.openmessaging.connect.runtime.store;
 
+import io.openmessaging.connect.runtime.service.PositionManagementService;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OffsetStorageWriter {
+public class PositionStorageWriter {
 
-    private MetaStore offsetMetaStore;
+    private PositionManagementService positionManagementService;
     private Map<Map<String, ?>, Map<String, ?>> data = new HashMap<>();
 
-    public OffsetStorageWriter(MetaStore offsetMetaStore){
-        this.offsetMetaStore = offsetMetaStore;
+    public PositionStorageWriter(PositionManagementService positionManagementService){
+        this.positionManagementService = positionManagementService;
     }
 
     public void recordOffset(Map<String, ?> partition, Map<String, ?> offset){
@@ -17,6 +18,6 @@ public class OffsetStorageWriter {
     }
 
     public void flush(){
-        offsetMetaStore.persist();
+        positionManagementService.putPosition(data);
     }
 }

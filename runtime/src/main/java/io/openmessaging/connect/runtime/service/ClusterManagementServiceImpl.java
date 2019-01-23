@@ -1,25 +1,26 @@
 package io.openmessaging.connect.runtime.service;
 
-import io.openmessaging.Message;
 import io.openmessaging.connect.runtime.Worker;
-import io.openmessaging.connect.runtime.store.BrokerBasedStore;
-import io.openmessaging.consumer.MessageListener;
+import io.openmessaging.connect.runtime.utils.BrokerBasedLog;
+import io.openmessaging.connect.runtime.utils.Callback;
+import io.openmessaging.connect.runtime.utils.DataSynchronizer;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-public class HeartBeatServiceImpl implements HeartBeatService{
+public class ClusterManagementServiceImpl implements ClusterManagementService {
 
     private Map<String, Long> aliveWorker;
-    private BrokerBasedStore brokerBasedStore;
-    private HeartBeatService.WorkerStatusListener workerStatusListener;
+    private DataSynchronizer<String, String> dataSynchronizer;
+    private ClusterManagementService.WorkerStatusListener workerStatusListener;
     private final ScheduledExecutorService scheduledExecutorService;
 
-
-    public HeartBeatServiceImpl(Worker worker, HeartBeatService.WorkerStatusListener workerStatusListener) {
-        this.brokerBasedStore = new BrokerBasedStore(new HeartBeatMessageListener());
+    public ClusterManagementServiceImpl(Worker worker, ClusterManagementService.WorkerStatusListener workerStatusListener) {
+        this.dataSynchronizer = new BrokerBasedLog<>();
         this.workerStatusListener = workerStatusListener;
         scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             @Override
@@ -29,54 +30,85 @@ public class HeartBeatServiceImpl implements HeartBeatService{
         });
     }
 
+    @Override
     public void start(){
+
+        // on worker online
+        sendOnLineHeartBeat();
+
+        dataSynchronizer.start(new ClusterChangeCallback());
+
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
             public void run() {
                 try {
 
-                    boolean workerChanged = false;
+                    // check whether a machine is offline
+                    Set<String> offLineMachine = new HashSet<>();
                     for(String workerId : aliveWorker.keySet()){
                         if((aliveWorker.get(workerId) + 30000) < System.currentTimeMillis()){
-                            aliveWorker.remove(workerId);
-                            workerChanged = true;
+                            offLineMachine.add(workerId);
                         }
                     }
-                    if(workerChanged){
-                        workerStatusListener.onWorkerChange();
+                    if(offLineMachine.size() > 0){
+                        sendOffLineHeartBeat(offLineMachine);
                     }
+                } catch (Exception e) {
+                }
+            }
+        }, 1000, 20*1000, TimeUnit.MILLISECONDS);
+
+        this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+
+            @Override
+            public void run() {
+                try {
+                    sendAliveHeartBeat();
                 } catch (Exception e) {
                 }
             }
         }, 1000, 20*1000, TimeUnit.MILLISECONDS);
     }
 
+    @Override
+    public void stop(){
+        sendOffLineHeartBeat();
+    }
+
     public void sendAliveHeartBeat() {
 
-        // producer.send();
+        // dataSynchronizer.send();
+    }
+
+    public void sendOnLineHeartBeat(){
+
+        // dataSynchronizer
     }
 
     public void sendOffLineHeartBeat(){
 
-        // producer.send();
+        // dataSynchronizer.send();
     }
 
-    private class HeartBeatMessageListener implements MessageListener{
+    public void sendOffLineHeartBeat(Set<String> workerIds){
 
-        @Override public void onReceived(Message message, Context context) {
+    }
 
-            switch (message.sysHeaders().getString("")){
-                case "heartbeat":
-                    if(!aliveWorker.containsKey("worker1")){
-                        aliveWorker.put("worker1", System.currentTimeMillis());
-                        workerStatusListener.onWorkerChange();
-                    }
-                    break;
-                case "offLine":
-                    aliveWorker.remove("worker1");
+    @Override public Set<String> getAllAliveWorkers() {
+        return this.aliveWorker.keySet();
+    }
+
+    private class ClusterChangeCallback implements Callback<String, String> {
+
+        @Override public void onCompletion(Throwable error, String key, String result) {
+
+            switch(key){
+
+                default:
                     break;
             }
+            workerStatusListener.onWorkerChange();
         }
     }
 }

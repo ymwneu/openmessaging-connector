@@ -2,7 +2,7 @@ package io.openmessaging.connect.runtime.store;
 
 import java.util.Map;
 
-public class OffsetFileBasedStore extends AbstractFileBaseStore<Map<Map<String, ?>, Map<String, ?>>> {
+public class PositionFileBasedStore extends AbstractFileBaseStore<Map<Map<String, ?>, Map<String, ?>>> {
 
     private Map<Map<String, ?>, Map<String, ?>> offsetTable;
 

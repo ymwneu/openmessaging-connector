@@ -1,15 +1,34 @@
-package io.openmessaging.connector.api;
+package io.openmessaging.connector.api.data;
 
 import java.util.List;
 
 public class Schema {
 
-    enum Type {
-        INT8,
-    }
-
-    private Type type;
-    private Boolean isOptional;
+    private String dataSource;
     private String name;
     private List<Field> fields;
+
+    public String getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public List<Field> getFields() {
+        return fields;
+    }
+
+    public void setFields(List<Field> fields) {
+        this.fields = fields;
+    }
 }

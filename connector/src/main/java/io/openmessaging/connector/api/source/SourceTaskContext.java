@@ -1,11 +1,12 @@
-package io.openmessaging.connector.api;
+package io.openmessaging.connector.api.source;
 
-import java.util.Collection;
-import java.util.Map;
+import io.openmessaging.connector.api.PositionStorageReader;
+import io.openmessaging.connector.api.TaskContext;
 
 public interface SourceTaskContext extends TaskContext {
 
-    <T> Map<String, Object> getOffset(Map<String, T> queue);
-
-    <T> Map<Map<String, T>, Map<String, Object>> getOffsets(Collection<Map<String, T>> queues);
+    /**
+     * Get the PositionStorageReader for this SourceTask.
+     */
+    PositionStorageReader offsetStorageReader();
 }

@@ -1,4 +1,4 @@
-package io.openmessaging.connect.runtime.service;
+package io.openmessaging.connect.runtime.store;
 
 import io.openmessaging.consumer.MessageListener;
 import io.openmessaging.producer.Producer;

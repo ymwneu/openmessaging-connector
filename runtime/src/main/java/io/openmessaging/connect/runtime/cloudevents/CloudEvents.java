@@ -1,4 +1,4 @@
-package io.openmessaging.connect.runtime;
+package io.openmessaging.connect.runtime.cloudevents;
 
 import java.net.URI;
 import java.time.ZonedDateTime;

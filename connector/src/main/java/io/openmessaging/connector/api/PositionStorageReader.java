@@ -1,4 +1,4 @@
-package io.openmessaging.connector.api.source;
+package io.openmessaging.connector.api;
 
 import java.util.Collection;
 import java.util.Map;

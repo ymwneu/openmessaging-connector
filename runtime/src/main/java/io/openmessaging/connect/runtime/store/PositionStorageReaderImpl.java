@@ -1,22 +1,23 @@
 package io.openmessaging.connect.runtime.store;
 
-import io.openmessaging.connector.api.source.OffsetStorageReader;
+import io.openmessaging.connect.runtime.service.PositionManagementService;
+import io.openmessaging.connector.api.PositionStorageReader;
 import java.util.Collection;
 import java.util.Map;
 
-public class OffsetStorageReaderImpl implements OffsetStorageReader {
+public class PositionStorageReaderImpl implements PositionStorageReader {
 
-    private MetaStore offsetMetaStore;
+    private PositionManagementService positionManagementService;
 
-    public OffsetStorageReaderImpl(MetaStore offsetMetaStore){
-        this.offsetMetaStore = offsetMetaStore;
+    public PositionStorageReaderImpl(PositionManagementService positionManagementService){
+        this.positionManagementService = positionManagementService;
     }
 
-    @Override public <T> Map<String, Object> getPosition(Map<String, T> partition) {
-        return null;
+    @Override public <T> Map<String, ?> getPosition(Map<String, T> partition) {
+        return positionManagementService.getPositionTable().get(partition);
     }
 
-    @Override public <T> Map<Map<String, T>, Map<String, Object>> getPositions(Collection<Map<String, T>> partitions) {
+    @Override public <T> Map<Map<String, T>, Map<String, ?>> getPositions(Collection<Map<String, T>> partitions) {
         return null;
     }
 }
