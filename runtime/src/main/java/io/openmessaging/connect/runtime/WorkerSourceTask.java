@@ -21,9 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class WorkerSourceTask implements Runnable {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkerSourceTask.class);
+
+    private String connectorName;
     private SourceTask sourceTask;
     private KeyValue taskConfig;
     private AtomicBoolean isStopping;
@@ -32,11 +37,13 @@ public class WorkerSourceTask implements Runnable {
     private Producer producer;
     private Map<Map<String, ?>, Map<String, ?>> positionData = new HashMap<>();
 
-    public WorkerSourceTask(SourceTask sourceTask,
+    public WorkerSourceTask(String connectorName,
+                            SourceTask sourceTask,
                             KeyValue taskConfig,
                             PositionStorageReader positionStorageReader,
                             Producer producer,
                             Converter converter){
+        this.connectorName = connectorName;
         this.sourceTask = sourceTask;
         this.taskConfig = taskConfig;
         this.positionStorageReader = positionStorageReader;
@@ -75,8 +82,8 @@ public class WorkerSourceTask implements Runnable {
                 @Override public void operationComplete(Future future) {
                     // send ok
                     Map<String, ?> sourcePartition = event.getData().get().getSourcePartition();
-                    Map<String, ?> sourceOffset = event.getData().get().getSourceOffset();
-                    positionData.put(sourcePartition, sourceOffset);
+                    Map<String, ?> sourcePosition = event.getData().get().getSourcePosition();
+                    positionData.put(sourcePartition, sourcePosition);
                 }
             });
         }
@@ -126,5 +133,13 @@ public class WorkerSourceTask implements Runnable {
             results.add(cloudEvents);
         }
         return results;
+    }
+
+    public String getConnectorName() {
+        return connectorName;
+    }
+
+    public KeyValue getTaskConfig() {
+        return taskConfig;
     }
 }

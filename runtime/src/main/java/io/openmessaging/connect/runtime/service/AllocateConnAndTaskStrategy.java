@@ -1,6 +1,7 @@
-package io.openmessaging.connect.runtime;
+package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.KeyValue;
+import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;

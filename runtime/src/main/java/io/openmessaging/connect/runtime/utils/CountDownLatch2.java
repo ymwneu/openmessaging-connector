@@ -1,4 +1,4 @@
-package io.openmessaging.connect.runtime;
+package io.openmessaging.connect.runtime.utils;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;

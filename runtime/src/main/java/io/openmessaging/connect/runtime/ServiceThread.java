@@ -1,6 +1,6 @@
 package io.openmessaging.connect.runtime;
 
-import java.util.concurrent.CountDownLatch;
+import io.openmessaging.connect.runtime.utils.CountDownLatch2;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 

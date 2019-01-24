@@ -12,12 +12,6 @@ public interface Connector {
     void initConfiguration(KeyValue config);
 
     /**
-     * Reconfigure while the connector is running.
-     * @param config
-     */
-    void reconfigure(KeyValue config);
-
-    /**
      * Start this connector.
      */
     void start();

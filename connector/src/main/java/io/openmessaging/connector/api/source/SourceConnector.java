@@ -1,4 +1,6 @@
 package io.openmessaging.connector.api.source;
 
-public abstract class SourceConnector {
+import io.openmessaging.connector.api.Connector;
+
+public abstract class SourceConnector implements Connector {
 }

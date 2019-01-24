@@ -1,4 +1,4 @@
-package io.openmessaging.connect.runtime;
+package io.openmessaging.connect.runtime.utils;
 
 import io.openmessaging.KeyValue;
 import io.openmessaging.connector.api.Connector;
