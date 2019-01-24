@@ -1,24 +1,27 @@
 package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.KeyValue;
+import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
 import io.openmessaging.connect.runtime.store.ConnectorConfigFileBaseStore;
 import io.openmessaging.connect.runtime.store.MetaStore;
 import io.openmessaging.connect.runtime.utils.BrokerBasedLog;
 import io.openmessaging.connect.runtime.utils.Callback;
 import io.openmessaging.connect.runtime.utils.DataSynchronizer;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ConfigManagementServiceImpl implements ConfigManagementService {
 
     private MetaStore metaStore;
-    private ConnectorConfigUpdateListener connectorConfigUpdateListener;
+    private Set<ConnectorConfigUpdateListener> connectorConfigUpdateListener;
     private DataSynchronizer<String, ConnAndTaskConfigs> dataSynchronizer;
 
-    public ConfigManagementServiceImpl(ConnectorConfigUpdateListener connectorConfigUpdateListener){
+    public ConfigManagementServiceImpl(MessagingAccessPoint point){
         this.metaStore = new ConnectorConfigFileBaseStore();
-        this.connectorConfigUpdateListener = connectorConfigUpdateListener;
+        this.connectorConfigUpdateListener = new HashSet<>();
         this.dataSynchronizer = new BrokerBasedLog<>();
     }
 
@@ -58,10 +61,16 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
         this.metaStore.persist();
     }
 
+    @Override public void registerListener(ConnectorConfigUpdateListener listener) {
+        this.connectorConfigUpdateListener.add(listener);
+    }
+
     private class ConfigChangeCallback implements Callback<String, ConnAndTaskConfigs> {
 
         @Override public void onCompletion(Throwable error, String key, ConnAndTaskConfigs result) {
-            connectorConfigUpdateListener.onConfigUpdate();
+            for(ConnectorConfigUpdateListener listener : ConfigManagementServiceImpl.this.connectorConfigUpdateListener){
+                listener.onConfigUpdate();
+            }
         }
     }
 }

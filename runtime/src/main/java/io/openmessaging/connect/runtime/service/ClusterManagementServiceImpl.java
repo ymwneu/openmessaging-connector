@@ -1,6 +1,8 @@
 package io.openmessaging.connect.runtime.service;
 
+import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.Worker;
+import io.openmessaging.connect.runtime.config.ConnectConfig;
 import io.openmessaging.connect.runtime.utils.BrokerBasedLog;
 import io.openmessaging.connect.runtime.utils.Callback;
 import io.openmessaging.connect.runtime.utils.DataSynchronizer;
@@ -16,12 +18,12 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
 
     private Map<String, Long> aliveWorker;
     private DataSynchronizer<String, String> dataSynchronizer;
-    private ClusterManagementService.WorkerStatusListener workerStatusListener;
+    private Set<ClusterManagementService.WorkerStatusListener> workerStatusListener;
     private final ScheduledExecutorService scheduledExecutorService;
 
-    public ClusterManagementServiceImpl(Worker worker, ClusterManagementService.WorkerStatusListener workerStatusListener) {
+    public ClusterManagementServiceImpl(ConnectConfig connectConfig, MessagingAccessPoint point) {
         this.dataSynchronizer = new BrokerBasedLog<>();
-        this.workerStatusListener = workerStatusListener;
+        this.workerStatusListener = new HashSet<>();
         scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -45,14 +47,10 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
                 try {
 
                     // check whether a machine is offline
-                    Set<String> offLineMachine = new HashSet<>();
                     for(String workerId : aliveWorker.keySet()){
                         if((aliveWorker.get(workerId) + 30000) < System.currentTimeMillis()){
-                            offLineMachine.add(workerId);
+                            aliveWorker.remove(workerId);
                         }
-                    }
-                    if(offLineMachine.size() > 0){
-                        sendOffLineHeartBeat(offLineMachine);
                     }
                 } catch (Exception e) {
                 }
@@ -91,12 +89,12 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
         // dataSynchronizer.send();
     }
 
-    public void sendOffLineHeartBeat(Set<String> workerIds){
-
-    }
-
     @Override public Set<String> getAllAliveWorkers() {
         return this.aliveWorker.keySet();
+    }
+
+    @Override public void registerListener(WorkerStatusListener listener) {
+        this.workerStatusListener.add(listener);
     }
 
     private class ClusterChangeCallback implements Callback<String, String> {
@@ -108,7 +106,9 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
                 default:
                     break;
             }
-            workerStatusListener.onWorkerChange();
+            for(WorkerStatusListener listener : ClusterManagementServiceImpl.this.workerStatusListener){
+                listener.onWorkerChange();
+            }
         }
     }
 }

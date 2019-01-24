@@ -24,6 +24,8 @@ public interface ConfigManagementService {
 
     void persist();
 
+    void registerListener(ConnectorConfigUpdateListener listener);
+
     interface ConnectorConfigUpdateListener {
         void onConfigUpdate();
     }

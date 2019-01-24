@@ -1,5 +1,6 @@
 package io.openmessaging.connect.runtime.service;
 
+import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.store.MetaStore;
 import io.openmessaging.connect.runtime.store.PositionFileBasedStore;
 import io.openmessaging.connect.runtime.utils.BrokerBasedLog;
@@ -13,7 +14,7 @@ public class PositionManagementServiceImpl implements PositionManagementService 
     private MetaStore metaStore;
     private DataSynchronizer<Map<String, ?>, Map<String, ?>> dataSynchronizer;
 
-    public PositionManagementServiceImpl(){
+    public PositionManagementServiceImpl(MessagingAccessPoint point){
         this.metaStore = new PositionFileBasedStore();
         this.dataSynchronizer = new BrokerBasedLog<>();
     }

@@ -1,4 +1,6 @@
 package io.openmessaging.connector.api.sink;
 
-public abstract class SinkConnector {
+import io.openmessaging.connector.api.Connector;
+
+public abstract class SinkConnector implements Connector {
 }

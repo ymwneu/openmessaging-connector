@@ -9,6 +9,9 @@ public interface ClusterManagementService {
     void stop();
 
     Set<String> getAllAliveWorkers();
+
+    void registerListener(WorkerStatusListener listener);
+
     interface WorkerStatusListener {
 
         void onWorkerChange();

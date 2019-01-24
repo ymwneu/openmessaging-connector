@@ -5,7 +5,6 @@ import java.io.UnsupportedEncodingException;
 
 public class BasicConverter implements Converter {
 
-
     @Override
     public byte[] objectToByte(Object object) {
         String json = JSON.toJSONString(object);

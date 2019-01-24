@@ -4,9 +4,9 @@ public class Field {
 
     private int index;
     private String name;
-    private String type;
+    private FieldType type;
 
-    public Field(int index, String name, String type) {
+    public Field(int index, String name, FieldType type) {
 
         this.index = index;
         this.name = name;
@@ -29,11 +29,11 @@ public class Field {
         this.name = name;
     }
 
-    public String getType() {
+    public FieldType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(FieldType type) {
         this.type = type;
     }
 }
