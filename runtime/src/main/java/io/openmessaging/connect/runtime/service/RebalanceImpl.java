@@ -2,12 +2,11 @@ package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.KeyValue;
 import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
-import io.openmessaging.connect.runtime.utils.ConnectorAccessPoint;
 import io.openmessaging.connect.runtime.Worker;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
+import io.openmessaging.connect.runtime.utils.ConnectorAccessPoint;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class RebalanceImpl {
 
@@ -28,18 +27,22 @@ public class RebalanceImpl {
     }
 
     public void doRebalance() {
-        Set<String> curAliveWorkers = clusterManagementService.getAllAliveWorkers();
+        Map<String, Long> curAliveWorkers = clusterManagementService.getAllAliveWorkers();
         Map<String, KeyValue> curConnectorConfigs = configManagementService.getConnectorConfigs();
         Map<String, List<KeyValue>> curTaskConfigs = configManagementService.getTaskConfigs();
 
-        ConnAndTaskConfigs allocateResult = allocateConnAndTaskStrategy.allocate(curAliveWorkers, worker.getWorkerName(), curConnectorConfigs, curTaskConfigs);
+        ConnAndTaskConfigs allocateResult = allocateConnAndTaskStrategy.allocate(curAliveWorkers.keySet(), worker.getWorkerName(), curConnectorConfigs, curTaskConfigs);
         updateProcessConfigsInRebalance(allocateResult);
     }
 
     private void updateProcessConfigsInRebalance(ConnAndTaskConfigs allocateResult) {
 
-        worker.startConnectors(allocateResult.getConnectorConfigs());
-        worker.startTasks(allocateResult.getTaskConfigs());
+        try{
+            worker.startConnectors(allocateResult.getConnectorConfigs());
+            worker.startTasks(allocateResult.getTaskConfigs());
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
     class WorkerStatusListenerImpl implements ClusterManagementService.WorkerStatusListener{

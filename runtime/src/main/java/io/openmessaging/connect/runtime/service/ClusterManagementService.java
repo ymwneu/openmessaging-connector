@@ -1,6 +1,6 @@
 package io.openmessaging.connect.runtime.service;
 
-import java.util.Set;
+import java.util.Map;
 
 public interface ClusterManagementService {
 
@@ -8,7 +8,7 @@ public interface ClusterManagementService {
 
     void stop();
 
-    Set<String> getAllAliveWorkers();
+    Map<String, Long> getAllAliveWorkers();
 
     void registerListener(WorkerStatusListener listener);
 

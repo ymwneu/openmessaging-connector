@@ -16,11 +16,11 @@ public class PositionManagementServiceImpl implements PositionManagementService 
 
     public PositionManagementServiceImpl(MessagingAccessPoint point){
         this.metaStore = new PositionFileBasedStore();
-        this.dataSynchronizer = new BrokerBasedLog<>();
+        this.dataSynchronizer = null;
     }
 
     @Override public void start() {
-        dataSynchronizer.start(new PositionChangeCallback());
+        dataSynchronizer.start();
     }
 
     @Override public void stop() {

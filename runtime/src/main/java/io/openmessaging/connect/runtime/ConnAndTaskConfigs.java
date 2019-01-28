@@ -1,13 +1,14 @@
 package io.openmessaging.connect.runtime;
 
 import io.openmessaging.KeyValue;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ConnAndTaskConfigs {
 
-    Map<String, KeyValue> connectorConfigs;
-    Map<String, List<KeyValue>> taskConfigs;
+    Map<String, KeyValue> connectorConfigs = new HashMap<>();
+    Map<String, List<KeyValue>> taskConfigs = new HashMap<>();
 
     public Map<String, KeyValue> getConnectorConfigs() {
         return connectorConfigs;

@@ -1,11 +1,12 @@
 package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.MessagingAccessPoint;
-import io.openmessaging.connect.runtime.Worker;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
 import io.openmessaging.connect.runtime.utils.BrokerBasedLog;
 import io.openmessaging.connect.runtime.utils.Callback;
 import io.openmessaging.connect.runtime.utils.DataSynchronizer;
+import io.openmessaging.connector.api.sink.OMSQueue;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -16,13 +17,20 @@ import java.util.concurrent.TimeUnit;
 
 public class ClusterManagementServiceImpl implements ClusterManagementService {
 
-    private Map<String, Long> aliveWorker;
-    private DataSynchronizer<String, String> dataSynchronizer;
+    private static final OMSQueue CLUSTER_MESSAGE_TOPIC = new OMSQueue("cluster-topic");
+    private Map<String, Long> aliveWorker = new HashMap<>();
+
+    private DataSynchronizer<String, Map<String, Long>> dataSynchronizer;
     private Set<ClusterManagementService.WorkerStatusListener> workerStatusListener;
     private final ScheduledExecutorService scheduledExecutorService;
+    private final ConnectConfig connectConfig;
 
-    public ClusterManagementServiceImpl(ConnectConfig connectConfig, MessagingAccessPoint point) {
-        this.dataSynchronizer = new BrokerBasedLog<>();
+    public ClusterManagementServiceImpl(ConnectConfig connectConfig, MessagingAccessPoint messagingAccessPoint) {
+        this.connectConfig = connectConfig;
+        this.dataSynchronizer = new BrokerBasedLog<>(messagingAccessPoint,
+                                                     CLUSTER_MESSAGE_TOPIC,
+                                                     connectConfig.getWorkerName(),
+                                                     new ClusterChangeCallback());
         this.workerStatusListener = new HashSet<>();
         scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             @Override
@@ -35,36 +43,29 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
     @Override
     public void start(){
 
+        dataSynchronizer.start();
+
         // on worker online
         sendOnLineHeartBeat();
 
-        dataSynchronizer.start(new ClusterChangeCallback());
+        this.scheduledExecutorService.scheduleAtFixedRate(() -> {
 
-        this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+            try {
 
-            @Override
-            public void run() {
-                try {
-
-                    // check whether a machine is offline
-                    for(String workerId : aliveWorker.keySet()){
-                        if((aliveWorker.get(workerId) + 30000) < System.currentTimeMillis()){
-                            aliveWorker.remove(workerId);
-                        }
+                // check whether a machine is offline
+                for(String workerId : aliveWorker.keySet()){
+                    if((aliveWorker.get(workerId) + 30000) < System.currentTimeMillis()){
+                        aliveWorker.remove(workerId);
                     }
-                } catch (Exception e) {
                 }
+            } catch (Exception e) {
             }
         }, 1000, 20*1000, TimeUnit.MILLISECONDS);
 
-        this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    sendAliveHeartBeat();
-                } catch (Exception e) {
-                }
+        this.scheduledExecutorService.scheduleAtFixedRate(() -> {
+            try {
+                sendAliveHeartBeat();
+            } catch (Exception e) {
             }
         }, 1000, 20*1000, TimeUnit.MILLISECONDS);
     }
@@ -76,12 +77,13 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
 
     public void sendAliveHeartBeat() {
 
-        // dataSynchronizer.send();
+        aliveWorker.put(connectConfig.getWorkerName(), System.currentTimeMillis());
+//        dataSynchronizer.send("AliveHeartBeat", aliveWorker);
     }
 
     public void sendOnLineHeartBeat(){
-
-        // dataSynchronizer
+        aliveWorker.put(connectConfig.getWorkerName(), System.currentTimeMillis());
+//        dataSynchronizer.send("AliveHeartBeat", aliveWorker);
     }
 
     public void sendOffLineHeartBeat(){
@@ -89,17 +91,19 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
         // dataSynchronizer.send();
     }
 
-    @Override public Set<String> getAllAliveWorkers() {
-        return this.aliveWorker.keySet();
+    @Override
+    public Map<String, Long> getAllAliveWorkers() {
+        return this.aliveWorker;
     }
 
-    @Override public void registerListener(WorkerStatusListener listener) {
+    @Override
+    public void registerListener(WorkerStatusListener listener) {
         this.workerStatusListener.add(listener);
     }
 
-    private class ClusterChangeCallback implements Callback<String, String> {
+    private class ClusterChangeCallback implements Callback<String, Map<String, Long>> {
 
-        @Override public void onCompletion(Throwable error, String key, String result) {
+        @Override public void onCompletion(Throwable error, String key, Map<String, Long> result) {
 
             switch(key){
 

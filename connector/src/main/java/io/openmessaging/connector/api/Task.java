@@ -4,7 +4,14 @@ import io.openmessaging.KeyValue;
 
 public interface Task {
 
-    void start(KeyValue props);
+    /**
+     * Start the task with the given config.
+     * @param config
+     */
+    void start(KeyValue config);
 
+    /**
+     * Stop the task.
+     */
     void stop();
 }

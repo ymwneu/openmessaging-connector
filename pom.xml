@@ -27,6 +27,7 @@
     <modules>
         <module>connector</module>
         <module>runtime</module>
+        <module>mysql-connector</module>
     </modules>
 
 
@@ -108,6 +109,11 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>mysql-connector</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.openmessaging</groupId>
                 <artifactId>openmessaging-api</artifactId>
                 <version>0.3.1-alpha</version>
@@ -136,6 +142,11 @@
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-core</artifactId>
                 <version>1.0.13</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.rocketmq</groupId>
+                <artifactId>rocketmq-openmessaging</artifactId>
+                <version>4.3.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

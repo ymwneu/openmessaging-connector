@@ -12,7 +12,7 @@ public interface ConfigManagementService {
 
     Map<String, KeyValue> getConnectorConfigs();
 
-    void putConnectorConfig(String connectorName, KeyValue configs);
+    void putConnectorConfig(String connectorName, KeyValue configs) throws Exception;
 
     void removeConnectorConfig(String connectorName);
 

@@ -6,6 +6,8 @@ import io.javalin.Javalin;
 import io.openmessaging.KeyValue;
 import io.openmessaging.connect.runtime.ConnectController;
 import io.openmessaging.connect.runtime.common.LoggerName;
+import io.openmessaging.internal.DefaultKeyValue;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,16 +20,31 @@ public class RestHandler {
     public RestHandler(ConnectController connectController){
         this.connectController = connectController;
         Javalin app = Javalin.start(8080);
-        app.post("/connectors/:connectorName", this::handleCreateConnector);
+        app.get("/connectors/:connectorName", this::handleCreateConnector);
         app.get("/connectors/:connectorName/config", this::handleQueryConnectorConfig);
         app.get("/connectors/:connectorName/status", this::handleQueryConnectorStatus);
         app.post("/connectors/:connectorName/stop", this::handleStopConnector);
+        app.get("/get", this::getInfo);
+    }
+
+    private void getInfo(Context context) {
+        context.result(JSON.toJSONString(connectController.getClusterManagementService().getAllAliveWorkers()));
     }
 
     private void handleCreateConnector(Context context) {
-        String body = context.body();
         String connectorName = context.param("connectorName");
-        KeyValue keyValue = JSON.parseObject(body, KeyValue.class);
+        String arg = context.queryParam("config");
+        Map keyValue = JSON.parseObject(arg, Map.class);
+        KeyValue configs = new DefaultKeyValue();
+        for(Object key : keyValue.keySet()){
+            configs.put((String)key, (String)keyValue.get(key));
+        }
+        try {
+            connectController.getConfigManagementService().putConnectorConfig(connectorName, configs);
+            context.result("success");
+        } catch (Exception e) {
+            context.result("failed");
+        }
     }
 
     private String handleQueryConnectorConfig(Context context){
