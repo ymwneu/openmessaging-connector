@@ -3,7 +3,7 @@ package io.openmessaging.connect.runtime.config;
 public class ConnectConfig {
 
     private String workerName = "DEFAULT_WORKER";
-    private String omsDriverUrl = "";
+    private String omsDriverUrl = "oms:rocketmq://localhost:9876/default:default";
 
     public String getOmsDriverUrl() {
         return omsDriverUrl;

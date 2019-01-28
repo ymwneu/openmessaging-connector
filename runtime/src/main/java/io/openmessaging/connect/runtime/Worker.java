@@ -5,7 +5,6 @@ import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
 import io.openmessaging.connect.runtime.service.PositionManagementService;
 import io.openmessaging.connect.runtime.utils.BasicConverter;
-import io.openmessaging.connect.runtime.utils.ConnectorAccessPoint;
 import io.openmessaging.connect.runtime.utils.Converter;
 import io.openmessaging.connector.api.Connector;
 import io.openmessaging.connector.api.Task;
@@ -29,7 +28,6 @@ public class Worker {
     private Set<WorkerSourceTask> workingTasks = new HashSet<>();
     private final ExecutorService taskExecutor;
     private PositionManagementService positionManagementService;
-    private ConnectorAccessPoint connectorAccessPoint;
     private MessagingAccessPoint messagingAccessPoint;
     private Converter converter;
     private TaskPositionCommitService taskPositionCommitService;
@@ -56,7 +54,8 @@ public class Worker {
         taskPositionCommitService.start();
     }
 
-    public void startConnectors(Map<String, KeyValue> connectorConfigs){
+    public void startConnectors(Map<String, KeyValue> connectorConfigs) throws Exception {
+
 
         Set<WorkerConnector> stoppedConnector = new HashSet<>();
         for(WorkerConnector workerConnector : workingConnectors){
@@ -71,6 +70,9 @@ public class Worker {
         }
         workingConnectors.removeAll(stoppedConnector);
 
+        if(null == connectorConfigs || 0 == connectorConfigs.size()){
+            return;
+        }
         Map<String, KeyValue> newConnectors = new HashMap<>();
         for(String connectorName : connectorConfigs.keySet()){
             boolean isNewConnector = true;
@@ -86,14 +88,16 @@ public class Worker {
         }
 
         for(String connectorName : newConnectors.keySet()){
-            Connector connector = connectorAccessPoint.createConnector(connectorName);
+            KeyValue keyValue = newConnectors.get(connectorName);
+            Class clazz = Class.forName(keyValue.getString("class"));
+            Connector connector = (Connector) clazz.newInstance();
             WorkerConnector workerConnector = new WorkerConnector(connectorName, connector, connectorConfigs.get(connectorName));
             workerConnector.start();
             this.workingConnectors.add(workerConnector);
         }
     }
 
-    public void startTasks(Map<String, List<KeyValue>> taskConfigs){
+    public void startTasks(Map<String, List<KeyValue>> taskConfigs) throws Exception {
 
         Set<WorkerSourceTask> stoppedTasks = new HashSet<>();
         for(WorkerSourceTask workerSourceTask : workingTasks){
@@ -115,6 +119,9 @@ public class Worker {
         }
         workingTasks.removeAll(stoppedTasks);
 
+        if (null == taskConfigs || 0 == taskConfigs.size()){
+            return;
+        }
         Map<String, List<KeyValue>> newTasks = new HashMap<>();
         for(String connectorName : taskConfigs.keySet()){
             for(KeyValue keyValue : taskConfigs.get(connectorName)){
@@ -136,7 +143,8 @@ public class Worker {
 
         for(String connectorName : newTasks.keySet()){
             for(KeyValue keyValue : newTasks.get(connectorName)){
-                Task task = connectorAccessPoint.createTask(connectorName, keyValue);
+                Class clazz = Class.forName(keyValue.getString("class"));
+                Task task = (Task) clazz.newInstance();
                 if(task instanceof SourceTask){
                     Producer producer = messagingAccessPoint.createProducer();
                     producer.startup();

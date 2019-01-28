@@ -6,18 +6,12 @@ import java.util.List;
 public interface Connector {
 
     /**
-     * Init the configuration of a connector. It will be invoke before {@link #start}.
-     * @param config
+     * Start the connector with the given config.
      */
-    void initConfiguration(KeyValue config);
+    void start(KeyValue config);
 
     /**
-     * Start this connector.
-     */
-    void start();
-
-    /**
-     * stop this connector.
+     * Stop the connector.
      */
     void stop();
 

@@ -17,6 +17,13 @@ public class BasicConverter implements Converter {
 
     @Override
     public Object byteToObject(byte[] bytes) {
+        try {
+            String text = new String(bytes, "UTF-8");
+            Object res = JSON.parseObject(text, Object.class);
+            return res;
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 }

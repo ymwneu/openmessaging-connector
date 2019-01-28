@@ -1,5 +1,6 @@
 package io.openmessaging.connector.api.sink;
 
+import io.openmessaging.Message;
 import io.openmessaging.connector.api.Task;
 import java.util.Collection;
 
@@ -16,7 +17,7 @@ public abstract class SinkTask implements Task {
     }
 
     /**
-     * put the data entries to the sink.
+     * Put the data entries to the sink.
      * */
-    abstract void put(Collection<SinkDataEntry> message);
+    abstract void put(Collection<Message> message);
 }

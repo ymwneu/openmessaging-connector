@@ -52,18 +52,18 @@ public class ConnectController {
                 return new Thread(r, "ConnectScheduledThread");
             }
         });
+
     }
 
     public void start(){
 
-        this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+        messagingAccessPoint.startup();
+        clusterManagementService.start();
+        this.scheduledExecutorService.scheduleAtFixedRate(() -> {
 
-            @Override
-            public void run() {
-                try {
-                    ConnectController.this.configManagementService.persist();
-                } catch (Exception e) {
-                }
+            try {
+                ConnectController.this.configManagementService.persist();
+            } catch (Exception e) {
             }
         }, 1000, 20*1000, TimeUnit.MILLISECONDS);
     }
@@ -73,5 +73,33 @@ public class ConnectController {
 
     public ConnectConfig getConnectConfig() {
         return connectConfig;
+    }
+
+    public ConfigManagementService getConfigManagementService() {
+        return configManagementService;
+    }
+
+    public PositionManagementService getPositionManagementService() {
+        return positionManagementService;
+    }
+
+    public ClusterManagementService getClusterManagementService() {
+        return clusterManagementService;
+    }
+
+    public Worker getWorker() {
+        return worker;
+    }
+
+    public MessagingAccessPoint getMessagingAccessPoint() {
+        return messagingAccessPoint;
+    }
+
+    public RestHandler getRestHandler() {
+        return restHandler;
+    }
+
+    public RebalanceImpl getRebalanceImpl() {
+        return rebalanceImpl;
     }
 }

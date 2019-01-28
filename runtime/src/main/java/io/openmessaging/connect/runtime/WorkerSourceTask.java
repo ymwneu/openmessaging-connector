@@ -8,6 +8,7 @@ import io.openmessaging.connect.runtime.cloudevents.CloudEvents;
 import io.openmessaging.connect.runtime.cloudevents.Extension;
 import io.openmessaging.connect.runtime.utils.Converter;
 import io.openmessaging.connector.api.PositionStorageReader;
+import io.openmessaging.connector.api.sink.OMSQueue;
 import io.openmessaging.connector.api.source.SourceDataEntry;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.producer.Producer;
@@ -54,13 +55,17 @@ public class WorkerSourceTask implements Runnable {
 
     @Override
     public void run() {
-        sourceTask.start(taskConfig);
-
-        while(!isStopping.get()){
-            Collection<SourceDataEntry> toSendEntries =  sourceTask.poll();
-            if(null != toSendEntries && toSendEntries.size() > 0){
-                sendRecord(toSendEntries);
+        try {
+            sourceTask.start(taskConfig);
+            System.out.println("task start");
+            while (!isStopping.get()) {
+                Collection<SourceDataEntry> toSendEntries = sourceTask.poll();
+                if (null != toSendEntries && toSendEntries.size() > 0) {
+                    sendRecord(toSendEntries);
+                }
             }
+        }catch(Exception e){
+            e.printStackTrace();
         }
     }
 
@@ -76,15 +81,15 @@ public class WorkerSourceTask implements Runnable {
 
         List<CloudEvents<SourceDataEntry>> events = parseDataEntriesToCloudEvents(entries);
         for(CloudEvents<SourceDataEntry> event : events){
-            BytesMessage bytesMessage = producer.createBytesMessage("", converter.objectToByte(event));
+            SourceDataEntry dataEntry = event.getData().get();
+            OMSQueue queue = dataEntry.getQueue();
+            BytesMessage bytesMessage = producer.createBytesMessage(queue.getQueue(), converter.objectToByte(event));
             Future<SendResult> sendResult = producer.sendAsync(bytesMessage);
-            sendResult.addListener(new FutureListener() {
-                @Override public void operationComplete(Future future) {
-                    // send ok
-                    Map<String, ?> sourcePartition = event.getData().get().getSourcePartition();
-                    Map<String, ?> sourcePosition = event.getData().get().getSourcePosition();
-                    positionData.put(sourcePartition, sourcePosition);
-                }
+            sendResult.addListener((future) -> {
+                // send ok
+                Map<String, ?> sourcePartition = event.getData().get().getSourcePartition();
+                Map<String, ?> sourcePosition = event.getData().get().getSourcePosition();
+                positionData.put(sourcePartition, sourcePosition);
             });
         }
     }
