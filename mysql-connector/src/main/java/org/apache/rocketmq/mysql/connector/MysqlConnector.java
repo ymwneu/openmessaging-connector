@@ -11,12 +11,8 @@ public class MysqlConnector extends SourceConnector {
 
     private KeyValue config;
 
-    @Override public void initConfiguration(KeyValue config) {
+    @Override public void start(KeyValue config) {
         this.config = config;
-    }
-
-    @Override public void start() {
-
     }
 
     @Override public void stop() {

@@ -1,5 +1,8 @@
 package io.openmessaging.connector.api.sink;
 
+/**
+ * Define the target queue of a standard message.
+ */
 public class OMSQueue {
 
     private String queue;

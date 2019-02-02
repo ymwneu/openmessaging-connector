@@ -37,8 +37,8 @@ public class ConnectController {
         this.connectConfig = connectConfig;
         this.messagingAccessPoint = OMS.getMessagingAccessPoint(connectConfig.getOmsDriverUrl());
         this.clusterManagementService = new ClusterManagementServiceImpl(connectConfig, messagingAccessPoint);
-        this.configManagementService = new ConfigManagementServiceImpl(messagingAccessPoint);
-        this.positionManagementService = new PositionManagementServiceImpl(messagingAccessPoint);
+        this.configManagementService = new ConfigManagementServiceImpl(connectConfig, messagingAccessPoint);
+        this.positionManagementService = new PositionManagementServiceImpl(connectConfig, messagingAccessPoint);
         this.worker = new Worker(connectConfig, positionManagementService, messagingAccessPoint);
         this.rebalanceImpl = new RebalanceImpl(connectConfig, worker, configManagementService, clusterManagementService);
         restHandler = new RestHandler(this);
@@ -59,6 +59,7 @@ public class ConnectController {
 
         messagingAccessPoint.startup();
         clusterManagementService.start();
+        configManagementService.start();
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
 
             try {
@@ -69,6 +70,7 @@ public class ConnectController {
     }
 
     public void shutdown(){
+        System.out.println("shutting down");
     }
 
     public ConnectConfig getConnectConfig() {

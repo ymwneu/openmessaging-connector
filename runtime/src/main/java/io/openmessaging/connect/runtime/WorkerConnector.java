@@ -15,8 +15,7 @@ public class WorkerConnector{
     }
 
     public void start() {
-        connector.initConfiguration(keyValue);
-        connector.start();
+        connector.start(keyValue);
     }
 
     public void stop(){
