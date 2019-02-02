@@ -4,8 +4,9 @@ import io.openmessaging.KeyValue;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
 import io.openmessaging.connect.runtime.service.PositionManagementService;
-import io.openmessaging.connect.runtime.utils.BasicConverter;
+import io.openmessaging.connect.runtime.utils.JsonConverter;
 import io.openmessaging.connect.runtime.utils.Converter;
+import io.openmessaging.connector.api.ConfigDefine;
 import io.openmessaging.connector.api.Connector;
 import io.openmessaging.connector.api.Task;
 import io.openmessaging.connector.api.source.SourceTask;
@@ -23,7 +24,7 @@ import java.util.concurrent.ThreadFactory;
 
 public class Worker {
 
-    private final String workerName;
+    private final String workerId;
     private Set<WorkerConnector> workingConnectors = new HashSet<>();
     private Set<WorkerSourceTask> workingTasks = new HashSet<>();
     private final ExecutorService taskExecutor;
@@ -42,11 +43,11 @@ public class Worker {
     public Worker(ConnectConfig connectConfig,
         PositionManagementService positionManagementService,
         MessagingAccessPoint messagingAccessPoint) {
-        this.workerName = connectConfig.getWorkerName();
+        this.workerId = connectConfig.getWorkerId();
         this.taskExecutor = Executors.newCachedThreadPool();
         this.positionManagementService = positionManagementService;
         this.messagingAccessPoint = messagingAccessPoint;
-        this.converter = new BasicConverter();
+        this.converter = new JsonConverter();
         taskPositionCommitService = new TaskPositionCommitService(this);
     }
 
@@ -89,7 +90,7 @@ public class Worker {
 
         for(String connectorName : newConnectors.keySet()){
             KeyValue keyValue = newConnectors.get(connectorName);
-            Class clazz = Class.forName(keyValue.getString("class"));
+            Class clazz = Class.forName(keyValue.getString(ConfigDefine.CONNECTOR_CLASS));
             Connector connector = (Connector) clazz.newInstance();
             WorkerConnector workerConnector = new WorkerConnector(connectorName, connector, connectorConfigs.get(connectorName));
             workerConnector.start();
@@ -143,7 +144,7 @@ public class Worker {
 
         for(String connectorName : newTasks.keySet()){
             for(KeyValue keyValue : newTasks.get(connectorName)){
-                Class clazz = Class.forName(keyValue.getString("class"));
+                Class clazz = Class.forName(keyValue.getString(ConfigDefine.CONNECTOR_CLASS));
                 Task task = (Task) clazz.newInstance();
                 if(task instanceof SourceTask){
                     Producer producer = messagingAccessPoint.createProducer();
@@ -164,8 +165,8 @@ public class Worker {
         positionManagementService.putPosition(positionData);
     }
 
-    public String getWorkerName() {
-        return workerName;
+    public String getWorkerId() {
+        return workerId;
     }
 
 }

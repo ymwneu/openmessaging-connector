@@ -16,4 +16,10 @@ public interface PositionManagementService {
     void putPosition(Map<Map<String, ?>, Map<String, ?>> positions);
 
     void removePosition(List<Map<String, ?>> partitions);
+
+    void registerListener(PositionManagementService.PositionUpdateListener listener);
+
+    interface PositionUpdateListener {
+        void onPositionUpdate();
+    }
 }

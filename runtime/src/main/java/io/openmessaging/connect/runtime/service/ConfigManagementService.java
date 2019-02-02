@@ -18,10 +18,6 @@ public interface ConfigManagementService {
 
     Map<String, List<KeyValue>> getTaskConfigs();
 
-    void putTaskConfigs(String connectorName, List<KeyValue> configs);
-
-    void removeTaskConfigs(String connectorName);
-
     void persist();
 
     void registerListener(ConnectorConfigUpdateListener listener);

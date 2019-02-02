@@ -18,6 +18,7 @@ public class RebalanceImpl {
     private AllocateConnAndTaskStrategy allocateConnAndTaskStrategy;
     public RebalanceImpl(ConnectConfig connectorConfig, Worker worker, ConfigManagementService configManagementService,
         ClusterManagementService clusterManagementService) {
+
         this.worker = worker;
         this.configManagementService = configManagementService;
         this.clusterManagementService = clusterManagementService;
@@ -27,12 +28,14 @@ public class RebalanceImpl {
     }
 
     public void doRebalance() {
+
         Map<String, Long> curAliveWorkers = clusterManagementService.getAllAliveWorkers();
         Map<String, KeyValue> curConnectorConfigs = configManagementService.getConnectorConfigs();
         Map<String, List<KeyValue>> curTaskConfigs = configManagementService.getTaskConfigs();
 
-        ConnAndTaskConfigs allocateResult = allocateConnAndTaskStrategy.allocate(curAliveWorkers.keySet(), worker.getWorkerName(), curConnectorConfigs, curTaskConfigs);
-        updateProcessConfigsInRebalance(allocateResult);
+        ConnAndTaskConfigs allocateResult = allocateConnAndTaskStrategy.allocate(curAliveWorkers.keySet(), worker.getWorkerId(), curConnectorConfigs, curTaskConfigs);
+        System.out.println("allocateResult:"+ allocateResult.getConnectorConfigs());
+        //        updateProcessConfigsInRebalance(allocateResult);
     }
 
     private void updateProcessConfigsInRebalance(ConnAndTaskConfigs allocateResult) {
