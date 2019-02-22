@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mysql.binlog;
 
+import io.openmessaging.connector.api.data.EntryType;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
@@ -29,11 +30,11 @@ import org.slf4j.LoggerFactory;
 public class DataRow {
     private Logger logger = LoggerFactory.getLogger(DataRow.class);
 
-    private String type;
+    private EntryType type;
     private Table table;
     private Serializable[] row;
 
-    public DataRow(String type, Table table, Serializable[] row) {
+    public DataRow(EntryType type, Table table, Serializable[] row) {
         this.type = type;
         this.table = table;
         this.row = row;
@@ -72,5 +73,17 @@ public class DataRow {
         }
 
         return null;
+    }
+
+    public EntryType getType() {
+        return type;
+    }
+
+    public Table getTable() {
+        return table;
+    }
+
+    public Serializable[] getRow() {
+        return row;
     }
 }

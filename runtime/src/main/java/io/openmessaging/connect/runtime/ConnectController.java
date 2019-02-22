@@ -4,6 +4,7 @@ import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.OMS;
 import io.openmessaging.connect.runtime.common.LoggerName;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
+import io.openmessaging.connect.runtime.connectorwrapper.Worker;
 import io.openmessaging.connect.runtime.rest.RestHandler;
 import io.openmessaging.connect.runtime.service.ClusterManagementService;
 import io.openmessaging.connect.runtime.service.ClusterManagementServiceImpl;
@@ -14,7 +15,6 @@ import io.openmessaging.connect.runtime.service.PositionManagementServiceImpl;
 import io.openmessaging.connect.runtime.service.RebalanceImpl;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,25 +34,20 @@ public class ConnectController {
     private ScheduledExecutorService scheduledExecutorService;
 
     public ConnectController(ConnectConfig connectConfig) {
+
         this.connectConfig = connectConfig;
         this.messagingAccessPoint = OMS.getMessagingAccessPoint(connectConfig.getOmsDriverUrl());
         this.clusterManagementService = new ClusterManagementServiceImpl(connectConfig, messagingAccessPoint);
         this.configManagementService = new ConfigManagementServiceImpl(connectConfig, messagingAccessPoint);
         this.positionManagementService = new PositionManagementServiceImpl(connectConfig, messagingAccessPoint);
         this.worker = new Worker(connectConfig, positionManagementService, messagingAccessPoint);
-        this.rebalanceImpl = new RebalanceImpl(connectConfig, worker, configManagementService, clusterManagementService);
+        this.rebalanceImpl = new RebalanceImpl(worker, configManagementService, clusterManagementService);
         restHandler = new RestHandler(this);
     }
 
     public void initialize(){
 
-        this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "ConnectScheduledThread");
-            }
-        });
-
+        this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor((r) -> new Thread(r, "ConnectScheduledThread"));
     }
 
     public void start(){
@@ -60,17 +55,63 @@ public class ConnectController {
         messagingAccessPoint.startup();
         clusterManagementService.start();
         configManagementService.start();
+        positionManagementService.start();
+        worker.start();
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
 
             try {
                 ConnectController.this.configManagementService.persist();
             } catch (Exception e) {
+                log.error("schedule persist config error.", e);
+            }
+        }, 1000, 20*1000, TimeUnit.MILLISECONDS);
+
+        this.scheduledExecutorService.scheduleAtFixedRate(() -> {
+
+            try {
+                ConnectController.this.positionManagementService.persist();
+            } catch (Exception e) {
+                log.error("schedule persist position error.", e);
             }
         }, 1000, 20*1000, TimeUnit.MILLISECONDS);
     }
 
     public void shutdown(){
-        System.out.println("shutting down");
+
+        if(messagingAccessPoint != null){
+            messagingAccessPoint.shutdown();
+        }
+
+        if(clusterManagementService != null){
+            clusterManagementService.stop();
+        }
+
+        if(configManagementService != null){
+            configManagementService.stop();
+        }
+
+        if(positionManagementService != null){
+            positionManagementService.stop();
+        }
+
+        if(worker != null){
+            worker.stop();
+        }
+
+        if(configManagementService != null){
+            configManagementService.persist();
+        }
+
+        if(positionManagementService != null){
+            positionManagementService.persist();
+        }
+
+        this.scheduledExecutorService.shutdown();
+        try {
+            this.scheduledExecutorService.awaitTermination(5000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            log.error("shutdown scheduledExecutorService error.", e);
+        }
     }
 
     public ConnectConfig getConnectConfig() {

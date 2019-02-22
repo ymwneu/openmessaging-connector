@@ -24,8 +24,9 @@ import org.apache.rocketmq.mysql.schema.column.ColumnParser;
 public class Table {
     private String database;
     private String name;
-    private List<String> colList = new LinkedList<String>();
-    private List<ColumnParser> parserList = new LinkedList<ColumnParser>();
+    private List<String> colList = new LinkedList<>();
+    private List<ColumnParser> parserList = new LinkedList<>();
+    private List<String> rawDataTypeList = new LinkedList<>();
 
     public Table(String database, String table) {
         this.database = database;
@@ -40,8 +41,16 @@ public class Table {
         parserList.add(columnParser);
     }
 
+    public void addRawDataType(String rawDataType){
+        this.rawDataTypeList.add(rawDataType);
+    }
+
     public List<String> getColList() {
         return colList;
+    }
+
+    public List<String> getRawDataTypeList() {
+        return rawDataTypeList;
     }
 
     public String getDatabase() {

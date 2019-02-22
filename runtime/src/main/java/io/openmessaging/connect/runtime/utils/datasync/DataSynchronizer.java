@@ -1,4 +1,4 @@
-package io.openmessaging.connect.runtime.utils;
+package io.openmessaging.connect.runtime.utils.datasync;
 
 public interface DataSynchronizer<K, V> {
 

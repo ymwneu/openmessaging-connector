@@ -10,12 +10,12 @@ public interface PositionStorageReader {
      * @param partition
      * @return
      */
-    <T> Map<String, ?> getPosition(Map<String, T> partition);
+    byte[] getPosition(byte[] partition);
 
     /**
      * Get a set of positions for the specified partitions.
      * @param partitions
      * @return
      */
-    <T> Map<Map<String, T>, Map<String, ?>> getPositions(Collection<Map<String, T>> partitions);
+    Map<byte[], byte[]> getPositions(Collection<byte[]> partitions);
 }

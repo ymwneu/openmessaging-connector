@@ -1,6 +1,6 @@
 package io.openmessaging.connect.runtime.service;
 
-import io.openmessaging.KeyValue;
+import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import java.util.List;
 import java.util.Map;
 
@@ -10,13 +10,13 @@ public interface ConfigManagementService {
 
     void stop();
 
-    Map<String, KeyValue> getConnectorConfigs();
+    Map<String, ConnectKeyValue> getConnectorConfigs();
 
-    void putConnectorConfig(String connectorName, KeyValue configs) throws Exception;
+    String putConnectorConfig(String connectorName, ConnectKeyValue configs) throws Exception;
 
     void removeConnectorConfig(String connectorName);
 
-    Map<String, List<KeyValue>> getTaskConfigs();
+    Map<String, List<ConnectKeyValue>> getTaskConfigs();
 
     void persist();
 

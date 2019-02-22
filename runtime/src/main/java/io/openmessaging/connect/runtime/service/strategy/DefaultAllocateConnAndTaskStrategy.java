@@ -1,7 +1,7 @@
-package io.openmessaging.connect.runtime.service;
+package io.openmessaging.connect.runtime.service.strategy;
 
-import io.openmessaging.KeyValue;
-import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
+import io.openmessaging.connect.runtime.common.ConnAndTaskConfigs;
+import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,14 +11,17 @@ import java.util.TreeMap;
 
 public class DefaultAllocateConnAndTaskStrategy implements AllocateConnAndTaskStrategy {
     @Override
-    public ConnAndTaskConfigs allocate(Set<String> allWorker, String curWorker, Map<String, KeyValue> connectorConfigs,
-        Map<String, List<KeyValue>> taskConfigs) {
+    public ConnAndTaskConfigs allocate(Set<String> allWorker, String curWorker, Map<String, ConnectKeyValue> connectorConfigs,
+        Map<String, List<ConnectKeyValue>> taskConfigs) {
         ConnAndTaskConfigs allocateResult = new ConnAndTaskConfigs();
+        if(null == allWorker || 0 == allWorker.size()){
+            return allocateResult;
+        }
 
         List<String> sortedWorkers = new ArrayList<>(allWorker);
         Collections.sort(sortedWorkers);
-        Map<String, KeyValue> sortedConnectorConfigs = getSortedMap(connectorConfigs);
-        Map<String, List<KeyValue>> sortedTaskConfigs = getSortedMap(taskConfigs);;
+        Map<String, ConnectKeyValue> sortedConnectorConfigs = getSortedMap(connectorConfigs);
+        Map<String, List<ConnectKeyValue>> sortedTaskConfigs = getSortedMap(taskConfigs);;
         int index = 0;
         for(String connectorName : sortedConnectorConfigs.keySet()){
             String allocatedWorker = sortedWorkers.get(index%sortedWorkers.size());
@@ -29,7 +32,7 @@ public class DefaultAllocateConnAndTaskStrategy implements AllocateConnAndTaskSt
             allocateResult.getConnectorConfigs().put(connectorName, sortedConnectorConfigs.get(connectorName));
         }
         for(String connectorName : sortedTaskConfigs.keySet()){
-            for(KeyValue keyValue : sortedTaskConfigs.get(connectorName)){
+            for(ConnectKeyValue keyValue : sortedTaskConfigs.get(connectorName)){
                 String allocatedWorker = sortedWorkers.get(index%sortedWorkers.size());
                 index++;
                 if(!curWorker.equals(allocatedWorker)){

@@ -1,6 +1,6 @@
-package io.openmessaging.connector.api;
+package io.openmessaging.connect.runtime.config;
 
-public class ConfigDefine {
+public class RuntimeConfigDefine {
 
     public static final String CONNECTOR_CLASS = "connector-class";
 
@@ -10,4 +10,7 @@ public class ConfigDefine {
 
     public static final String CONFIG_DELETED = "config-deleted";
 
+    public static final String QUEUE_NAME = "queue-name";
+
+    public static final String SOURCE_RECORD_CONVERTER = "source-record-converter";
 }

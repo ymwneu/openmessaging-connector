@@ -17,11 +17,13 @@
 
 package org.apache.rocketmq.mysql;
 
+import io.openmessaging.KeyValue;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.Properties;
-
+import java.util.Set;
 
 public class Config {
 
@@ -30,25 +32,29 @@ public class Config {
     public String mysqlUsername;
     public String mysqlPassword;
 
-    public String mqNamesrvAddr;
-    public String mqTopic;
+    public String queueName;
 
     public String startType = "DEFAULT";
     public String binlogFilename;
     public Long nextPosition;
     public Integer maxTransactionRows = 100;
 
-    public void load() throws IOException {
+    public static final Set<String> REQUEST_CONFIG = new HashSet<String>(){
+        {
+            add("mysqlAddr");
+            add("mysqlPort");
+            add("mysqlUsername");
+            add("mysqlPassword");
+        }
+    };
 
-        InputStream in = Config.class.getClassLoader().getResourceAsStream("rocketmq_mysql.conf");
-        Properties properties = new Properties();
-        properties.load(in);
+    public void load(KeyValue props) {
 
-        properties2Object(properties, this);
-
+        properties2Object(props, this);
     }
 
-    private void properties2Object(final Properties p, final Object object) {
+    private void properties2Object(final KeyValue p, final Object object) {
+
         Method[] methods = object.getClass().getMethods();
         for (Method method : methods) {
             String mn = method.getName();
@@ -58,7 +64,7 @@ public class Config {
                     String first = mn.substring(3, 4);
 
                     String key = first.toLowerCase() + tmp;
-                    String property = p.getProperty(key);
+                    String property = p.getString(key);
                     if (property != null) {
                         Class<?>[] pt = method.getParameterTypes();
                         if (pt != null && pt.length > 0) {
@@ -116,15 +122,11 @@ public class Config {
         this.maxTransactionRows = maxTransactionRows;
     }
 
-    public void setMqNamesrvAddr(String mqNamesrvAddr) {
-        this.mqNamesrvAddr = mqNamesrvAddr;
-    }
-
-    public void setMqTopic(String mqTopic) {
-        this.mqTopic = mqTopic;
-    }
-
     public void setStartType(String startType) {
         this.startType = startType;
+    }
+
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
     }
 }

@@ -14,4 +14,14 @@ public interface Task {
      * Stop the task.
      */
     void stop();
+
+    /**
+     * Pause the task.
+     */
+    void pause();
+
+    /**
+     * Resume the task.
+     */
+    void resume();
 }

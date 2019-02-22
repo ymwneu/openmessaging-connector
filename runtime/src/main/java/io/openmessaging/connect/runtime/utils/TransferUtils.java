@@ -2,9 +2,8 @@ package io.openmessaging.connect.runtime.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import io.openmessaging.KeyValue;
-import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
-import io.openmessaging.internal.DefaultKeyValue;
+import io.openmessaging.connect.runtime.common.ConnAndTaskConfigs;
+import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +11,7 @@ import java.util.Map;
 
 public class TransferUtils {
 
-    public static String keyValueToString(KeyValue keyValue){
+    public static String keyValueToString(ConnectKeyValue keyValue){
 
         Map<String, String> resMap = new HashMap<>();
         if (null == keyValue) {
@@ -24,14 +23,14 @@ public class TransferUtils {
         return JSON.toJSONString(resMap);
     }
 
-    public static String keyValueListToString(List<KeyValue> keyValueList){
+    public static String keyValueListToString(List<ConnectKeyValue> keyValueList){
 
 
         List<Map<String, String>> resList = new ArrayList<>();
         if (null == keyValueList || 0 == keyValueList.size()) {
             return JSON.toJSONString(resList);
         }
-        for(KeyValue keyValue : keyValueList){
+        for(ConnectKeyValue keyValue : keyValueList){
             Map<String, String> resMap = new HashMap<>();
             for(String key : keyValue.keySet()){
                 resMap.put(key, keyValue.getString(key));
@@ -41,28 +40,28 @@ public class TransferUtils {
         return JSON.toJSONString(resList);
     }
 
-    public static KeyValue stringToKeyValue(String json){
+    public static ConnectKeyValue stringToKeyValue(String json){
 
         if(null == json){
-            return new DefaultKeyValue();
+            return new ConnectKeyValue();
         }
         Map<String, String> map = JSON.parseObject(json, Map.class);
-        KeyValue keyValue = new DefaultKeyValue();
+        ConnectKeyValue keyValue = new ConnectKeyValue();
         for(String key : map.keySet()){
             keyValue.put(key, map.get(key));
         }
         return keyValue;
     }
 
-    public static List<KeyValue> stringToKeyValueList(String json){
+    public static List<ConnectKeyValue> stringToKeyValueList(String json){
 
-        List<KeyValue> resultList = new ArrayList<>();
+        List<ConnectKeyValue> resultList = new ArrayList<>();
         if(null == json){
             return resultList;
         }
         List<Map<String, String>> list = JSON.parseObject(json, List.class);
         for(Map<String, String> map : list){
-            KeyValue keyValue = new DefaultKeyValue();
+            ConnectKeyValue keyValue = new ConnectKeyValue();
             for(String key : map.keySet()){
                 keyValue.put(key, map.get(key));
             }
@@ -87,11 +86,11 @@ public class TransferUtils {
         Map<String, String> taskConfigs = (Map<String, String>)jsonObject.getObject("task", Map.class);
 
 
-        Map<String, KeyValue> transferedConnectorConfigs = new HashMap<>();
+        Map<String, ConnectKeyValue> transferedConnectorConfigs = new HashMap<>();
         for(String key : connectorConfigs.keySet()){
             transferedConnectorConfigs.put(key, stringToKeyValue(connectorConfigs.get(key)));
         }
-        Map<String, List<KeyValue>> transferedTasksConfigs = new HashMap<>();
+        Map<String, List<ConnectKeyValue>> transferedTasksConfigs = new HashMap<>();
         for(String key : taskConfigs.keySet()){
             transferedTasksConfigs.put(key, stringToKeyValueList(taskConfigs.get(key)));
         }
