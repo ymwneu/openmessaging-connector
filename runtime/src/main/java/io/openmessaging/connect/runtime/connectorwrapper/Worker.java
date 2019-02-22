@@ -1,14 +1,16 @@
-package io.openmessaging.connect.runtime;
+package io.openmessaging.connect.runtime.connectorwrapper;
 
-import io.openmessaging.KeyValue;
+import io.netty.util.internal.ConcurrentSet;
 import io.openmessaging.MessagingAccessPoint;
+import io.openmessaging.connect.runtime.common.ConnectKeyValue;
+import io.openmessaging.connect.runtime.config.RuntimeConfigDefine;
+import io.openmessaging.connect.runtime.service.TaskPositionCommitService;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
 import io.openmessaging.connect.runtime.service.PositionManagementService;
-import io.openmessaging.connect.runtime.utils.JsonConverter;
-import io.openmessaging.connect.runtime.utils.Converter;
-import io.openmessaging.connector.api.ConfigDefine;
+import io.openmessaging.connect.runtime.store.PositionStorageReaderImpl;
 import io.openmessaging.connector.api.Connector;
 import io.openmessaging.connector.api.Task;
+import io.openmessaging.connector.api.data.Converter;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.producer.Producer;
 import java.util.ArrayList;
@@ -25,12 +27,11 @@ import java.util.concurrent.ThreadFactory;
 public class Worker {
 
     private final String workerId;
-    private Set<WorkerConnector> workingConnectors = new HashSet<>();
-    private Set<WorkerSourceTask> workingTasks = new HashSet<>();
+    private Set<WorkerConnector> workingConnectors = new ConcurrentSet<>();
+    private Set<WorkerSourceTask> workingTasks = new ConcurrentSet<>();
     private final ExecutorService taskExecutor;
     private PositionManagementService positionManagementService;
     private MessagingAccessPoint messagingAccessPoint;
-    private Converter converter;
     private TaskPositionCommitService taskPositionCommitService;
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
@@ -47,7 +48,6 @@ public class Worker {
         this.taskExecutor = Executors.newCachedThreadPool();
         this.positionManagementService = positionManagementService;
         this.messagingAccessPoint = messagingAccessPoint;
-        this.converter = new JsonConverter();
         taskPositionCommitService = new TaskPositionCommitService(this);
     }
 
@@ -55,14 +55,14 @@ public class Worker {
         taskPositionCommitService.start();
     }
 
-    public void startConnectors(Map<String, KeyValue> connectorConfigs) throws Exception {
+    public synchronized void startConnectors(Map<String, ConnectKeyValue> connectorConfigs) throws Exception {
 
 
         Set<WorkerConnector> stoppedConnector = new HashSet<>();
         for(WorkerConnector workerConnector : workingConnectors){
             String connectorName = workerConnector.getConnectorName();
-            KeyValue keyValue = connectorConfigs.get(connectorName);
-            if(null == keyValue){
+            ConnectKeyValue keyValue = connectorConfigs.get(connectorName);
+            if(null == keyValue || 0 != keyValue.getInt(RuntimeConfigDefine.CONFIG_DELETED)){
                 workerConnector.stop();
                 stoppedConnector.add(workerConnector);
             }else if(!keyValue.equals(workerConnector.getKeyValue())){
@@ -74,7 +74,7 @@ public class Worker {
         if(null == connectorConfigs || 0 == connectorConfigs.size()){
             return;
         }
-        Map<String, KeyValue> newConnectors = new HashMap<>();
+        Map<String, ConnectKeyValue> newConnectors = new HashMap<>();
         for(String connectorName : connectorConfigs.keySet()){
             boolean isNewConnector = true;
             for(WorkerConnector workerConnector : workingConnectors){
@@ -89,8 +89,8 @@ public class Worker {
         }
 
         for(String connectorName : newConnectors.keySet()){
-            KeyValue keyValue = newConnectors.get(connectorName);
-            Class clazz = Class.forName(keyValue.getString(ConfigDefine.CONNECTOR_CLASS));
+            ConnectKeyValue keyValue = newConnectors.get(connectorName);
+            Class clazz = Class.forName(keyValue.getString(RuntimeConfigDefine.CONNECTOR_CLASS));
             Connector connector = (Connector) clazz.newInstance();
             WorkerConnector workerConnector = new WorkerConnector(connectorName, connector, connectorConfigs.get(connectorName));
             workerConnector.start();
@@ -98,15 +98,15 @@ public class Worker {
         }
     }
 
-    public void startTasks(Map<String, List<KeyValue>> taskConfigs) throws Exception {
+    public synchronized void startTasks(Map<String, List<ConnectKeyValue>> taskConfigs) throws Exception {
 
         Set<WorkerSourceTask> stoppedTasks = new HashSet<>();
         for(WorkerSourceTask workerSourceTask : workingTasks){
             String connectorName = workerSourceTask.getConnectorName();
-            List<KeyValue> keyValues = taskConfigs.get(connectorName);
+            List<ConnectKeyValue> keyValues = taskConfigs.get(connectorName);
             boolean needStop = true;
             if(null != keyValues && keyValues.size() > 0){
-                for(KeyValue keyValue : keyValues){
+                for(ConnectKeyValue keyValue : keyValues){
                     if(keyValue.equals(workerSourceTask.getTaskConfig())){
                         needStop = false;
                         break;
@@ -123,9 +123,9 @@ public class Worker {
         if (null == taskConfigs || 0 == taskConfigs.size()){
             return;
         }
-        Map<String, List<KeyValue>> newTasks = new HashMap<>();
+        Map<String, List<ConnectKeyValue>> newTasks = new HashMap<>();
         for(String connectorName : taskConfigs.keySet()){
-            for(KeyValue keyValue : taskConfigs.get(connectorName)){
+            for(ConnectKeyValue keyValue : taskConfigs.get(connectorName)){
                 boolean isNewTask = true;
                 for(WorkerSourceTask workeringTask : workingTasks){
                     if(keyValue.equals(workeringTask.getTaskConfig())){
@@ -143,13 +143,19 @@ public class Worker {
         }
 
         for(String connectorName : newTasks.keySet()){
-            for(KeyValue keyValue : newTasks.get(connectorName)){
-                Class clazz = Class.forName(keyValue.getString(ConfigDefine.CONNECTOR_CLASS));
-                Task task = (Task) clazz.newInstance();
+            for(ConnectKeyValue keyValue : newTasks.get(connectorName)){
+                Class taskClazz = Class.forName(keyValue.getString(RuntimeConfigDefine.CONNECTOR_CLASS));
+                Task task = (Task) taskClazz.newInstance();
+
+                Class converterClazz = Class.forName(keyValue.getString(RuntimeConfigDefine.SOURCE_RECORD_CONVERTER));
+                Converter recordConverter = (Converter) converterClazz.newInstance();
+
                 if(task instanceof SourceTask){
                     Producer producer = messagingAccessPoint.createProducer();
                     producer.startup();
-                    WorkerSourceTask workerSourceTask = new WorkerSourceTask(connectorName, (SourceTask) task, keyValue, null, producer, converter);
+                    WorkerSourceTask workerSourceTask = new WorkerSourceTask(connectorName,
+                                (SourceTask) task, keyValue,
+                                new PositionStorageReaderImpl(positionManagementService), recordConverter, producer);
                     this.taskExecutor.submit(workerSourceTask);
                     this.workingTasks.add(workerSourceTask);
                 }
@@ -158,7 +164,7 @@ public class Worker {
     }
 
     public void commitTaskPosition() {
-        Map<Map<String, ?>, Map<String, ?>> positionData = new HashMap<>();
+        Map<byte[], byte[]> positionData = new HashMap<>();
         for(WorkerSourceTask task : workingTasks){
             positionData.putAll(task.getPositionData());
         }
@@ -169,4 +175,24 @@ public class Worker {
         return workerId;
     }
 
+    public void stop() {
+
+    }
+
+    public Set<WorkerConnector> getWorkingConnectors() {
+        return workingConnectors;
+    }
+
+    public void setWorkingConnectors(
+        Set<WorkerConnector> workingConnectors) {
+        this.workingConnectors = workingConnectors;
+    }
+
+    public Set<WorkerSourceTask> getWorkingTasks() {
+        return workingTasks;
+    }
+
+    public void setWorkingTasks(Set<WorkerSourceTask> workingTasks) {
+        this.workingTasks = workingTasks;
+    }
 }

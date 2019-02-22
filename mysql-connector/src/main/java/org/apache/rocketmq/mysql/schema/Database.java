@@ -73,6 +73,7 @@ public class Database {
                 Table table = tableMap.get(tableName);
                 table.addCol(colName);
                 table.addParser(columnParser);
+                table.addRawDataType(dataType);
             }
 
         } finally {

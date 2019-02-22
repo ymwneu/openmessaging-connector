@@ -17,6 +17,7 @@
 
 package org.apache.rocketmq.mysql.schema.column;
 
+import io.openmessaging.connector.api.data.FieldType;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,6 +54,38 @@ public abstract class ColumnParser {
                 return new SetColumnParser(colType);
             default:
                 return new DefaultColumnParser();
+        }
+    }
+
+    public static FieldType mapConnectorFieldType(String dataType) {
+
+        switch (dataType) {
+            case "tinyint":
+            case "smallint":
+            case "mediumint":
+            case "int":
+                return FieldType.INT32;
+            case "bigint":
+                return FieldType.BIG_INTEGER;
+            case "tinytext":
+            case "text":
+            case "mediumtext":
+            case "longtext":
+            case "varchar":
+            case "char":
+                return FieldType.STRING;
+            case "date":
+            case "datetime":
+            case "timestamp":
+            case "time":
+            case "year":
+                return FieldType.DATETIME;
+            case "enum":
+                return null;
+            case "set":
+                return null;
+            default:
+                return FieldType.BYTES;
         }
     }
 

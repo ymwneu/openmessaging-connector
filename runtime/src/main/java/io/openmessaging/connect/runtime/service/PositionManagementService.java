@@ -11,11 +11,11 @@ public interface PositionManagementService {
 
     void persist();
 
-    Map<Map<String, ?>, Map<String, ?>> getPositionTable();
+    Map<byte[], byte[]> getPositionTable();
 
-    void putPosition(Map<Map<String, ?>, Map<String, ?>> positions);
+    void putPosition(Map<byte[], byte[]> positions);
 
-    void removePosition(List<Map<String, ?>> partitions);
+    void removePosition(List<byte[]> partitions);
 
     void registerListener(PositionManagementService.PositionUpdateListener listener);
 

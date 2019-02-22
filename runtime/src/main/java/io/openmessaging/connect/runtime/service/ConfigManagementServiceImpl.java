@@ -2,20 +2,20 @@ package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.KeyValue;
 import io.openmessaging.MessagingAccessPoint;
-import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
+import io.openmessaging.connect.runtime.common.ConnAndTaskConfigs;
+import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
-import io.openmessaging.connect.runtime.store.FileBaseKeyValueBasedKeyValueStore;
+import io.openmessaging.connect.runtime.config.RuntimeConfigDefine;
+import io.openmessaging.connect.runtime.converter.ConnAndTaskConfigConverter;
+import io.openmessaging.connect.runtime.converter.JsonConverter;
+import io.openmessaging.connect.runtime.converter.ListConverter;
+import io.openmessaging.connect.runtime.store.FileBaseKeyValueStore;
 import io.openmessaging.connect.runtime.store.KeyValueStore;
-import io.openmessaging.connect.runtime.utils.BrokerBasedLog;
-import io.openmessaging.connect.runtime.utils.Callback;
-import io.openmessaging.connect.runtime.utils.ConnAndTaskConfigConverter;
-import io.openmessaging.connect.runtime.utils.ConnectKeyValue;
-import io.openmessaging.connect.runtime.utils.DataSynchronizer;
 import io.openmessaging.connect.runtime.utils.FilePathConfigUtil;
-import io.openmessaging.connect.runtime.utils.JsonConverter;
-import io.openmessaging.connector.api.ConfigDefine;
+import io.openmessaging.connect.runtime.utils.datasync.BrokerBasedLog;
+import io.openmessaging.connect.runtime.utils.datasync.DataSynchronizer;
+import io.openmessaging.connect.runtime.utils.datasync.DataSynchronizerCallback;
 import io.openmessaging.connector.api.Connector;
-import io.openmessaging.connector.api.sink.OMSQueue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,31 +25,31 @@ import java.util.Set;
 
 public class ConfigManagementServiceImpl implements ConfigManagementService {
 
-    private static final OMSQueue CONFIG_MESSAGE_TOPIC = new OMSQueue("config-topic", 0);
+    private static final String CONFIG_MESSAGE_TOPIC = "config-topic";
 
-    private KeyValueStore<String, KeyValue> connectorKeyValueStore;
-    private KeyValueStore<String, List<KeyValue>> taskKeyValueStore;
+    private KeyValueStore<String, ConnectKeyValue> connectorKeyValueStore;
+    private KeyValueStore<String, List<ConnectKeyValue>> taskKeyValueStore;
     private Set<ConnectorConfigUpdateListener> connectorConfigUpdateListener;
     private DataSynchronizer<String, ConnAndTaskConfigs> dataSynchronizer;
-    private ConnectConfig connectConfig;
 
     public ConfigManagementServiceImpl(ConnectConfig connectConfig,
                                        MessagingAccessPoint messagingAccessPoint){
 
-        this.connectConfig = connectConfig;
         this.connectorConfigUpdateListener = new HashSet<>();
         this.dataSynchronizer = new BrokerBasedLog<>(messagingAccessPoint,
                                                      CONFIG_MESSAGE_TOPIC,
                                                      connectConfig.getWorkerId()+System.currentTimeMillis(),
                                                      new ConfigManagementServiceImpl.ConfigChangeCallback(),
                                                      new JsonConverter(),
-                                                     new ConnAndTaskConfigConverter(),
-                                                     String.class,
-                                                     ConnAndTaskConfigs.class);
-        this.connectorKeyValueStore = new FileBaseKeyValueBasedKeyValueStore<>(
-                                                     FilePathConfigUtil.getConnectorConfigPath(connectConfig.getStorePathRootDir()));
-        this.taskKeyValueStore = new FileBaseKeyValueBasedKeyValueStore<>(
-                                                     FilePathConfigUtil.getTaskConfigPath(connectConfig.getStorePathRootDir()));
+                                                     new ConnAndTaskConfigConverter());
+        this.connectorKeyValueStore = new FileBaseKeyValueStore<>(
+                                                     FilePathConfigUtil.getConnectorConfigPath(connectConfig.getStorePathRootDir()),
+                                                     new JsonConverter(),
+                                                     new JsonConverter(ConnectKeyValue.class));
+        this.taskKeyValueStore = new FileBaseKeyValueStore<>(
+                                                     FilePathConfigUtil.getTaskConfigPath(connectConfig.getStorePathRootDir()),
+                                                     new JsonConverter(),
+                                                     new ListConverter(ConnectKeyValue.class));
     }
 
     @Override
@@ -69,13 +69,13 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
     }
 
     @Override
-    public Map<String, KeyValue> getConnectorConfigs() {
+    public Map<String, ConnectKeyValue> getConnectorConfigs() {
 
-        Map<String, KeyValue> result = new HashMap<>();
-        Map<String, KeyValue> connectorConfigs = connectorKeyValueStore.getKVMap();
+        Map<String, ConnectKeyValue> result = new HashMap<>();
+        Map<String, ConnectKeyValue> connectorConfigs = connectorKeyValueStore.getKVMap();
         for(String connectorName : connectorConfigs.keySet()){
-            KeyValue config = connectorConfigs.get(connectorName);
-            if(0 != config.getInt(ConfigDefine.CONFIG_DELETED)){
+            ConnectKeyValue config = connectorConfigs.get(connectorName);
+            if(0 != config.getInt(RuntimeConfigDefine.CONFIG_DELETED)){
                 continue;
             }
             result.put(connectorName, config);
@@ -84,42 +84,54 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
     }
 
     @Override
-    public void putConnectorConfig(String connectorName, KeyValue configs) throws Exception {
+    public String putConnectorConfig(String connectorName, ConnectKeyValue configs) throws Exception {
 
-        KeyValue exist = connectorKeyValueStore.get(connectorName);
+        ConnectKeyValue exist = connectorKeyValueStore.get(connectorName);
         if(configs.equals(exist)){
-            return;
+            return "";
         }
-        String className = configs.getString(ConfigDefine.CONNECTOR_CLASS);
+        String className = configs.getString(RuntimeConfigDefine.CONNECTOR_CLASS);
         Class clazz = Class.forName(className);
         Connector connector = (Connector) clazz.newInstance();
 
         Long currentTimestamp = System.currentTimeMillis();
-        configs.put(ConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
-        connector.start(configs);
+        configs.put(RuntimeConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
+        String errorMessage = connector.verifyAndSetConfig(configs);
+        if(errorMessage != null && errorMessage.length() > 0){
+
+            return errorMessage;
+        }
+        connector.start();
         connectorKeyValueStore.put(connectorName, configs);
         List<KeyValue> taskConfigs = connector.taskConfigs();
+        List<ConnectKeyValue> converterdConfigs = new ArrayList<>();
         for(KeyValue keyValue : taskConfigs){
-            keyValue.put(ConfigDefine.CONNECTOR_CLASS, connector.taskClass().getName());
-            keyValue.put(ConfigDefine.OMS_DRIVER_URL, configs.getString(ConfigDefine.OMS_DRIVER_URL));
-            keyValue.put(ConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
+            ConnectKeyValue newKeyValue = new ConnectKeyValue();
+            for(String key : keyValue.keySet()){
+                newKeyValue.put(key, keyValue.getString(key));
+            }
+            newKeyValue.put(RuntimeConfigDefine.CONNECTOR_CLASS, connector.taskClass().getName());
+            newKeyValue.put(RuntimeConfigDefine.OMS_DRIVER_URL, configs.getString(RuntimeConfigDefine.OMS_DRIVER_URL));
+            newKeyValue.put(RuntimeConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
+            converterdConfigs.add(newKeyValue);
         }
-        putTaskConfigs(connectorName, taskConfigs);
+        putTaskConfigs(connectorName, converterdConfigs);
         connector.stop();
         sendSynchronizeConfig();
 
         triggerListener();
+        return "";
     }
 
     @Override
     public void removeConnectorConfig(String connectorName) {
 
-        KeyValue config = new ConnectKeyValue();
-        config.put(ConfigDefine.UPDATE_TIMESATMP, System.currentTimeMillis());
-        config.put(ConfigDefine.CONFIG_DELETED, 1);
-        Map<String, KeyValue> connectorConfig = new HashMap<>();
+        ConnectKeyValue config = new ConnectKeyValue();
+        config.put(RuntimeConfigDefine.UPDATE_TIMESATMP, System.currentTimeMillis());
+        config.put(RuntimeConfigDefine.CONFIG_DELETED, 1);
+        Map<String, ConnectKeyValue> connectorConfig = new HashMap<>();
         connectorConfig.put(connectorName, config);
-        List<KeyValue> taskConfigList = new ArrayList<>();
+        List<ConnectKeyValue> taskConfigList = new ArrayList<>();
         taskConfigList.add(config);
 
         connectorKeyValueStore.put(connectorName, config);
@@ -128,11 +140,11 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
     }
 
     @Override
-    public Map<String, List<KeyValue>> getTaskConfigs() {
+    public Map<String, List<ConnectKeyValue>> getTaskConfigs() {
 
-        Map<String, List<KeyValue>> result = new HashMap<>();
-        Map<String, List<KeyValue>> taskConfigs = taskKeyValueStore.getKVMap();
-        Map<String, KeyValue> filteredConnector = getConnectorConfigs();
+        Map<String, List<ConnectKeyValue>> result = new HashMap<>();
+        Map<String, List<ConnectKeyValue>> taskConfigs = taskKeyValueStore.getKVMap();
+        Map<String, ConnectKeyValue> filteredConnector = getConnectorConfigs();
         for(String connectorName : taskConfigs.keySet()){
             if(!filteredConnector.containsKey(connectorName)){
                 continue;
@@ -142,9 +154,9 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
         return result;
     }
 
-    private void putTaskConfigs(String connectorName, List<KeyValue> configs) {
+    private void putTaskConfigs(String connectorName, List<ConnectKeyValue> configs) {
 
-        List<KeyValue> exist = taskKeyValueStore.get(connectorName);
+        List<ConnectKeyValue> exist = taskKeyValueStore.get(connectorName);
         if(null != exist && exist.size() > 0){
             taskKeyValueStore.remove(connectorName);
         }
@@ -190,7 +202,7 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
         dataSynchronizer.send(ConfigChangeEnum.CONFIG_CHANG_KEY.name(), configs);
     }
 
-    private class ConfigChangeCallback implements Callback<String, ConnAndTaskConfigs> {
+    private class ConfigChangeCallback implements DataSynchronizerCallback<String, ConnAndTaskConfigs> {
 
         @Override
         public void onCompletion(Throwable error, String key, ConnAndTaskConfigs result) {
@@ -218,16 +230,17 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
 
         boolean changed = false;
         for(String connectorName : newConnAndTaskConfig.getConnectorConfigs().keySet()){
-            KeyValue newConfig = newConnAndTaskConfig.getConnectorConfigs().get(connectorName);
-            KeyValue oldConfig = getConnectorConfigs().get(connectorName);
+            ConnectKeyValue newConfig = newConnAndTaskConfig.getConnectorConfigs().get(connectorName);
+            ConnectKeyValue oldConfig = getConnectorConfigs().get(connectorName);
             if(null == oldConfig){
+
                 changed = true;
                 connectorKeyValueStore.put(connectorName, newConfig);
                 taskKeyValueStore.put(connectorName, newConnAndTaskConfig.getTaskConfigs().get(connectorName));
             }else{
 
-                Long oldUpdateTime = oldConfig.getLong(ConfigDefine.UPDATE_TIMESATMP);
-                Long newUpdateTime = newConfig.getLong(ConfigDefine.UPDATE_TIMESATMP);
+                Long oldUpdateTime = oldConfig.getLong(RuntimeConfigDefine.UPDATE_TIMESATMP);
+                Long newUpdateTime = newConfig.getLong(RuntimeConfigDefine.UPDATE_TIMESATMP);
                 if(newUpdateTime > oldUpdateTime){
                     changed = true;
                     connectorKeyValueStore.put(connectorName, newConfig);

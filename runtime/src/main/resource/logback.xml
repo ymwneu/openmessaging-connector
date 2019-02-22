@@ -19,7 +19,7 @@
         </encoder>
     </appender>
 
-    <appender name="OMSRuntime"
+    <appender name="OMSRuntimeAppender"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${user.home}/logs/omsconnect/connect_runtime.log</file>
         <append>true</append>

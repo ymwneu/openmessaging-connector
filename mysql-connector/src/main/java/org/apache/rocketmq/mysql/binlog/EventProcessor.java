@@ -28,6 +28,7 @@ import com.github.shyiko.mysql.binlog.event.UpdateRowsEventData;
 import com.github.shyiko.mysql.binlog.event.WriteRowsEventData;
 import com.github.shyiko.mysql.binlog.event.XidEventData;
 import com.github.shyiko.mysql.binlog.event.deserialization.EventDeserializer;
+import io.openmessaging.connector.api.data.EntryType;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
@@ -68,6 +69,8 @@ public class EventProcessor {
 
     private Transaction transaction;
 
+    private boolean stopped;
+
     public EventProcessor(Replicator replicator) {
 
         this.replicator = replicator;
@@ -104,7 +107,13 @@ public class EventProcessor {
 
         LOGGER.info("Started.");
 
+        stopped = false;
+
         doProcess();
+    }
+
+    public void stop(){
+        stopped = true;
     }
 
     private void doProcess() {
@@ -113,6 +122,9 @@ public class EventProcessor {
             @Override public void run() {
                 while (true) {
 
+                    if(stopped){
+                        break;
+                    }
                     try {
                         Event event = queue.poll(1000, TimeUnit.MILLISECONDS);
                         if (event == null) {
@@ -190,7 +202,7 @@ public class EventProcessor {
         List<Serializable[]> list = data.getRows();
 
         for (Serializable[] row : list) {
-            addRow("WRITE", tableId, row);
+            addRow(EntryType.CREATE, tableId, row);
         }
     }
 
@@ -200,7 +212,7 @@ public class EventProcessor {
         List<Map.Entry<Serializable[], Serializable[]>> list = data.getRows();
 
         for (Map.Entry<Serializable[], Serializable[]> entry : list) {
-            addRow("UPDATE", tableId, entry.getValue());
+            addRow(EntryType.UPDATE, tableId, entry.getValue());
         }
     }
 
@@ -210,7 +222,7 @@ public class EventProcessor {
         List<Serializable[]> list = data.getRows();
 
         for (Serializable[] row : list) {
-            addRow("DELETE", tableId, row);
+            addRow(EntryType.DELETE, tableId, row);
         }
 
     }
@@ -244,7 +256,7 @@ public class EventProcessor {
         transaction = new Transaction(config);
     }
 
-    private void addRow(String type, Long tableId, Serializable[] row) {
+    private void addRow(EntryType type, Long tableId, Serializable[] row) {
 
         if (transaction == null) {
             transaction = new Transaction(config);

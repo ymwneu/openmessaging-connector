@@ -6,14 +6,31 @@ import java.util.List;
 public interface Connector {
 
     /**
+     * Should invoke before start the connector
+     *
+     * @return error message
+     */
+    String verifyAndSetConfig(KeyValue config);
+
+    /**
      * Start the connector with the given config.
      */
-    void start(KeyValue config);
+    void start();
 
     /**
      * Stop the connector.
      */
     void stop();
+
+    /**
+     * Pause the connector.
+     */
+    void pause();
+
+    /**
+     * Resume the connector.
+     */
+    void resume();
 
     /**
      * Returns the Task implementation for this Connector.

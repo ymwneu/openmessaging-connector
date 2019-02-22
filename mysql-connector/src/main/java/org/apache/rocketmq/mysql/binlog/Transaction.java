@@ -18,6 +18,7 @@
 package org.apache.rocketmq.mysql.binlog;
 
 import com.alibaba.fastjson.JSONObject;
+import io.openmessaging.connector.api.data.EntryType;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -39,7 +40,7 @@ public class Transaction {
         this.config = config;
     }
 
-    public boolean addRow(String type, Table table, Serializable[] row) {
+    public boolean addRow(EntryType type, Table table, Serializable[] row) {
 
         if (list.size() == config.maxTransactionRows) {
             return false;
@@ -49,6 +50,10 @@ public class Transaction {
             return true;
         }
 
+    }
+
+    public List<DataRow> getDataRows(){
+        return list;
     }
 
     public String toJson() {

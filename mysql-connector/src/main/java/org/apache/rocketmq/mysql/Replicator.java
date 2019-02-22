@@ -17,13 +17,10 @@
 
 package org.apache.rocketmq.mysql;
 
-import com.alibaba.fastjson.JSON;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.rocketmq.mysql.binlog.EventProcessor;
 import org.apache.rocketmq.mysql.binlog.Transaction;
-import org.apache.rocketmq.mysql.position.BinlogPositionLogThread;
-import org.apache.rocketmq.mysql.productor.RocketMQProducer;
 import org.apache.rocketmq.mysql.position.BinlogPosition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,28 +35,19 @@ public class Replicator {
 
     private EventProcessor eventProcessor;
 
-    private RocketMQProducer rocketMQProducer;
-
     private Object lock = new Object();
     private BinlogPosition nextBinlogPosition;
     private long nextQueueOffset;
     private long xid;
     private BlockingQueue<Transaction> queue = new LinkedBlockingQueue<>();
 
-    public static void main(String[] args) {
-
-        Replicator replicator = new Replicator();
-        replicator.start();
+    public Replicator(Config config){
+        this.config = config;
     }
 
     public void start() {
 
         try {
-            config = new Config();
-            config.load();
-
-            rocketMQProducer = new RocketMQProducer(config);
-            rocketMQProducer.start();
 
 //            BinlogPositionLogThread binlogPositionLogThread = new BinlogPositionLogThread(this);
 //            binlogPositionLogThread.start();
@@ -73,7 +61,9 @@ public class Replicator {
         }
     }
 
-    public void stop(){}
+    public void stop(){
+        eventProcessor.stop();
+    }
 
     public void commit(Transaction transaction, boolean isComplete) {
 

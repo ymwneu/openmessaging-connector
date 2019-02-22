@@ -1,7 +1,7 @@
 package io.openmessaging.connector.api.source;
 
-import io.openmessaging.Message;
 import io.openmessaging.connector.api.Task;
+import io.openmessaging.connector.api.data.SourceDataEntry;
 import java.util.Collection;
 
 public abstract class SourceTask implements Task {
@@ -19,5 +19,5 @@ public abstract class SourceTask implements Task {
     /**
      * Return a collection of message entries to send.
      * */
-    public abstract Collection<Message> poll();
+    public abstract Collection<SourceDataEntry> poll();
 }

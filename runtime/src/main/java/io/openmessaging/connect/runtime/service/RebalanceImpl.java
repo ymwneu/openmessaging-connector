@@ -1,22 +1,25 @@
 package io.openmessaging.connect.runtime.service;
 
-import io.openmessaging.KeyValue;
-import io.openmessaging.connect.runtime.ConnAndTaskConfigs;
-import io.openmessaging.connect.runtime.Worker;
-import io.openmessaging.connect.runtime.config.ConnectConfig;
-import io.openmessaging.connect.runtime.utils.ConnectorAccessPoint;
+import io.openmessaging.connect.runtime.common.ConnAndTaskConfigs;
+import io.openmessaging.connect.runtime.common.ConnectKeyValue;
+import io.openmessaging.connect.runtime.common.LoggerName;
+import io.openmessaging.connect.runtime.connectorwrapper.Worker;
+import io.openmessaging.connect.runtime.service.strategy.AllocateConnAndTaskStrategy;
+import io.openmessaging.connect.runtime.service.strategy.DefaultAllocateConnAndTaskStrategy;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class RebalanceImpl {
 
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.OMS_RUNTIME);
+
     private final Worker worker;
-    private ConnAndTaskConfigs processConfigs = new ConnAndTaskConfigs();
     private final ConfigManagementService configManagementService;
     private final ClusterManagementService clusterManagementService;
-    private ConnectorAccessPoint connectorAccessPoint;
     private AllocateConnAndTaskStrategy allocateConnAndTaskStrategy;
-    public RebalanceImpl(ConnectConfig connectorConfig, Worker worker, ConfigManagementService configManagementService,
+    public RebalanceImpl(Worker worker, ConfigManagementService configManagementService,
         ClusterManagementService clusterManagementService) {
 
         this.worker = worker;
@@ -30,12 +33,13 @@ public class RebalanceImpl {
     public void doRebalance() {
 
         Map<String, Long> curAliveWorkers = clusterManagementService.getAllAliveWorkers();
-        Map<String, KeyValue> curConnectorConfigs = configManagementService.getConnectorConfigs();
-        Map<String, List<KeyValue>> curTaskConfigs = configManagementService.getTaskConfigs();
+        Map<String, ConnectKeyValue> curConnectorConfigs = configManagementService.getConnectorConfigs();
+        Map<String, List<ConnectKeyValue>> curTaskConfigs = configManagementService.getTaskConfigs();
 
         ConnAndTaskConfigs allocateResult = allocateConnAndTaskStrategy.allocate(curAliveWorkers.keySet(), worker.getWorkerId(), curConnectorConfigs, curTaskConfigs);
-        System.out.println("allocateResult:"+ allocateResult.getConnectorConfigs());
-        //        updateProcessConfigsInRebalance(allocateResult);
+        log.info("allocated connector:"+ allocateResult.getConnectorConfigs());
+        log.info("allocated task:"+ allocateResult.getTaskConfigs());
+        updateProcessConfigsInRebalance(allocateResult);
     }
 
     private void updateProcessConfigsInRebalance(ConnAndTaskConfigs allocateResult) {
@@ -44,20 +48,22 @@ public class RebalanceImpl {
             worker.startConnectors(allocateResult.getConnectorConfigs());
             worker.startTasks(allocateResult.getTaskConfigs());
         }catch(Exception e){
-            e.printStackTrace();
+            log.error("RebalanceImpl#updateProcessConfigsInRebalance start connector or task failed", e);
         }
     }
 
     class WorkerStatusListenerImpl implements ClusterManagementService.WorkerStatusListener{
 
-        @Override public void onWorkerChange() {
+        @Override
+        public void onWorkerChange() {
             RebalanceImpl.this.doRebalance();
         }
     }
 
     class ConnectorConnectorConfigChangeListenerImpl implements ConfigManagementService.ConnectorConfigUpdateListener {
 
-        @Override public void onConfigUpdate() {
+        @Override
+        public void onConfigUpdate() {
             RebalanceImpl.this.doRebalance();
         }
     }

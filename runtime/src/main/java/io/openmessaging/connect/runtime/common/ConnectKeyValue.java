@@ -1,4 +1,4 @@
-package io.openmessaging.connect.runtime.utils;
+package io.openmessaging.connect.runtime.common;
 
 import io.openmessaging.KeyValue;
 import java.io.Serializable;
@@ -100,5 +100,20 @@ public class ConnectKeyValue implements KeyValue, Serializable {
 
     public void setProperties(Map<String, String> properties) {
         this.properties = properties;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+
+        if (obj != null && obj.getClass() == this.getClass()) {
+            ConnectKeyValue keyValue= (ConnectKeyValue) obj;
+            return this.properties.equals(keyValue.getProperties());
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode(){
+        return properties.hashCode();
     }
 }

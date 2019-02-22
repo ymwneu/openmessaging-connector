@@ -1,74 +1,71 @@
-package io.openmessaging.connect.runtime.utils;
+package io.openmessaging.connect.runtime.utils.datasync;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import io.openmessaging.Future;
-import io.openmessaging.FutureListener;
 import io.openmessaging.Message;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.OMS;
 import io.openmessaging.OMSBuiltinKeys;
-import io.openmessaging.connector.api.sink.OMSQueue;
-import io.openmessaging.consumer.MessageListener;
+import io.openmessaging.connect.runtime.common.LoggerName;
+import io.openmessaging.connector.api.data.Converter;
 import io.openmessaging.consumer.PushConsumer;
 import io.openmessaging.producer.Producer;
 import io.openmessaging.producer.SendResult;
-import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class BrokerBasedLog<K, V> implements DataSynchronizer<K, V>{
 
-    private Callback<K, V> callback;
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.OMS_RUNTIME);
+
+    private DataSynchronizerCallback<K, V> dataSynchronizerCallback;
     private Producer producer;
     private PushConsumer consumer;
-    private OMSQueue omsQueue;
+    private String queueName;
     private Converter keyConverter;
-    private Class<K> kClass;
     private Converter valueConverter;
-    private Class<V> vClass;
 
     public BrokerBasedLog(MessagingAccessPoint messagingAccessPoint,
-                          OMSQueue omsQueue,
+                          String queueName,
                           String consumerId,
-                          Callback<K, V> callback,
+                          DataSynchronizerCallback<K, V> dataSynchronizerCallback,
                           Converter keyConverter,
-                          Converter valueConverter,
-                          Class<K> kClass,
-                          Class<V> vClass){
-        this.omsQueue = omsQueue;
-        this.callback = callback;
+                          Converter valueConverter){
+        this.queueName = queueName;
+        this.dataSynchronizerCallback = dataSynchronizerCallback;
         producer = messagingAccessPoint.createProducer();
         consumer = messagingAccessPoint.createPushConsumer(
                                             OMS.newKeyValue().put(OMSBuiltinKeys.CONSUMER_ID, consumerId));
         this.keyConverter = keyConverter;
         this.valueConverter = valueConverter;
-        this.kClass = kClass;
-        this.vClass = vClass;
     }
 
-    @Override public void start() {
+    @Override
+    public void start() {
 
         producer.startup();
 
-        consumer.attachQueue(omsQueue.getQueue(), (message, context) -> {
+        consumer.attachQueue(queueName, (message, context) -> {
 
             try {
+
+                // Need openMessaging to support start consume message from tail.
                 if(Long.parseLong(message.sysHeaders().getString(Message.BuiltinKeys.BORN_TIMESTAMP)) + 10000 < System.currentTimeMillis()){
                     context.ack();
                     return;
                 }
-                System.out.printf("Received one message: %s%n", message.sysHeaders().getString(Message.BuiltinKeys.MESSAGE_ID));
+                log.info("Received one message: %s%n", message.sysHeaders().getString(Message.BuiltinKeys.MESSAGE_ID));
                 byte[] bytes = message.getBody(byte[].class);
                 Map<K, V> map = decodeKeyValue(bytes);
                 for (K key : map.keySet()) {
-                    callback.onCompletion(null, key, map.get(key));
+                    dataSynchronizerCallback.onCompletion(null, key, map.get(key));
                 }
                 context.ack();
             }catch(Exception e){
-                e.printStackTrace();
+                log.error("BrokerBasedLog process message failed.", e);
             }
         });
         consumer.startup();
@@ -85,27 +82,27 @@ public class BrokerBasedLog<K, V> implements DataSynchronizer<K, V>{
     public void send(K key, V value){
 
         try {
-            Future<SendResult> result = producer.sendAsync(producer.createBytesMessage(omsQueue.getQueue(), encodeKeyValue(key, value)));
+            Future<SendResult> result = producer.sendAsync(producer.createBytesMessage(queueName, encodeKeyValue(key, value)));
             result.addListener((future) -> {
 
                 if (future.getThrowable() != null) {
-                    System.out.printf("Send async message Failed, error: %s%n", future.getThrowable().getMessage());
+                    log.error("Send async message Failed, error: %s%n", future.getThrowable());
                 } else {
-                    System.out.printf("Send async message OK, msgId: %s%n", future.get().messageId());
+                    log.info("Send async message OK, msgId: %s%n", future.get().messageId());
                 }
             });
         } catch (Exception e) {
-
+            log.error("BrokerBaseLog send async message Failed.", e);
         }
     }
 
     private byte[] encodeKeyValue(K key, V value) throws Exception {
 
 
-        byte[] keyBtye = keyConverter.objectToByte(key);
+        byte[] keyByte = keyConverter.objectToByte(key);
         byte[] valueByte = valueConverter.objectToByte(value);
         Map<String, String> map = new HashMap<>();
-        map.put(Base64.getEncoder().encodeToString(keyBtye), Base64.getEncoder().encodeToString(valueByte));
+        map.put(Base64.getEncoder().encodeToString(keyByte), Base64.getEncoder().encodeToString(valueByte));
 
         return JSON.toJSONString(map).getBytes("UTF-8");
     }
