@@ -129,4 +129,44 @@ public class Config {
     public void setQueueName(String queueName) {
         this.queueName = queueName;
     }
+
+    public String getMysqlAddr() {
+        return mysqlAddr;
+    }
+
+    public Integer getMysqlPort() {
+        return mysqlPort;
+    }
+
+    public String getMysqlUsername() {
+        return mysqlUsername;
+    }
+
+    public String getMysqlPassword() {
+        return mysqlPassword;
+    }
+
+    public String getQueueName() {
+        return queueName;
+    }
+
+    public String getStartType() {
+        return startType;
+    }
+
+    public String getBinlogFilename() {
+        return binlogFilename;
+    }
+
+    public Long getNextPosition() {
+        return nextPosition;
+    }
+
+    public Integer getMaxTransactionRows() {
+        return maxTransactionRows;
+    }
+
+    public static Set<String> getRequestConfig() {
+        return REQUEST_CONFIG;
+    }
 }

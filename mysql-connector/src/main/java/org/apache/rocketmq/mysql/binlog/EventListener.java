@@ -21,8 +21,13 @@ import com.github.shyiko.mysql.binlog.BinaryLogClient;
 import com.github.shyiko.mysql.binlog.event.Event;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import org.apache.rocketmq.mysql.connector.MysqlTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EventListener implements BinaryLogClient.EventListener, BinaryLogClient.LifecycleListener {
+
+    private static final Logger log = LoggerFactory.getLogger(MysqlTask.class);
 
     private BlockingQueue<Event> queue;
 
@@ -39,7 +44,7 @@ public class EventListener implements BinaryLogClient.EventListener, BinaryLogCl
                 }
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            log.error("Mysql task EventListener#onEvent error.", e);
         }
     }
 

@@ -96,9 +96,13 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
 
         Long currentTimestamp = System.currentTimeMillis();
         configs.put(RuntimeConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
+        for(String requireConfig : RuntimeConfigDefine.REQUEST_CONFIG){
+            if(!configs.containsKey(requireConfig)){
+                return "Request config key: " + requireConfig;
+            }
+        }
         String errorMessage = connector.verifyAndSetConfig(configs);
         if(errorMessage != null && errorMessage.length() > 0){
-
             return errorMessage;
         }
         connector.start();
