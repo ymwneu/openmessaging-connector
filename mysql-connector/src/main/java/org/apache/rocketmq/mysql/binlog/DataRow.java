@@ -28,37 +28,51 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DataRow {
+
     private Logger logger = LoggerFactory.getLogger(DataRow.class);
 
     private EntryType type;
     private Table table;
+    private Serializable[] rowBeforeUpdate;
     private Serializable[] row;
 
-    public DataRow(EntryType type, Table table, Serializable[] row) {
+    public DataRow(EntryType type, Table table, Serializable[] row, Serializable[] rowBeforeUpdate) {
         this.type = type;
         this.table = table;
         this.row = row;
+        this.rowBeforeUpdate = rowBeforeUpdate;
     }
 
     public Map toMap() {
 
         try {
             if (table.getColList().size() == row.length) {
+                Map<String, Object> beforeDataMap = new HashMap<>();
                 Map<String, Object> dataMap = new HashMap<>();
                 List<String> keyList = table.getColList();
                 List<ColumnParser> parserList = table.getParserList();
 
                 for (int i = 0; i < keyList.size(); i++) {
-                    Object value = row[i];
                     ColumnParser parser = parserList.get(i);
-                    dataMap.put(keyList.get(i), parser.getValue(value));
+                    if(null != row){
+                        Object value = row[i];
+                        dataMap.put(keyList.get(i), parser.getValue(value));
+                    }
+                    if(null != rowBeforeUpdate){
+                        beforeDataMap.put(keyList.get(i), parser.getValue(rowBeforeUpdate[i]));
+                    }
                 }
 
                 Map<String, Object> map = new HashMap<>();
                 map.put("database", table.getDatabase());
                 map.put("table", table.getName());
                 map.put("type", type);
-                map.put("data", dataMap);
+                if(dataMap.size() > 0){
+                    map.put("data", dataMap);
+                }
+                if(beforeDataMap.size() > 0){
+                    map.put("beforeData", beforeDataMap);
+                }
 
                 return map;
             } else {
@@ -85,5 +99,9 @@ public class DataRow {
 
     public Serializable[] getRow() {
         return row;
+    }
+
+    public Serializable[] getRowBeforeUpdate() {
+        return rowBeforeUpdate;
     }
 }

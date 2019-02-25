@@ -1,5 +1,6 @@
 package org.apache.rocketmq.mysql.connector;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.openmessaging.KeyValue;
 import io.openmessaging.connector.api.data.DataEntryBuilder;
@@ -17,8 +18,12 @@ import org.apache.rocketmq.mysql.Replicator;
 import org.apache.rocketmq.mysql.binlog.DataRow;
 import org.apache.rocketmq.mysql.binlog.Transaction;
 import org.apache.rocketmq.mysql.schema.column.ColumnParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MysqlTask extends SourceTask {
+
+    private static final Logger log = LoggerFactory.getLogger(MysqlTask.class);
 
     private Replicator replicator;
 
@@ -43,7 +48,7 @@ public class MysqlTask extends SourceTask {
                 schema.setDataSource(dataRow.getTable().getDatabase());
                 schema.setName(dataRow.getTable().getName());
                 schema.setFields(new ArrayList<>());
-                for(int i = 0; i < dataRow.getTable().getColList().size() ; i++){
+                for(int i = 0; i < dataRow.getTable().getColList().size(); i++){
                     String columnName = dataRow.getTable().getColList().get(i);
                     String rawDataType = dataRow.getTable().getRawDataTypeList().get(i);
                     Field field = new Field(i, columnName, ColumnParser.mapConnectorFieldType(rawDataType));
@@ -54,8 +59,14 @@ public class MysqlTask extends SourceTask {
                     .queue(dataRow.getTable().getName())
                     .entryType(dataRow.getType());
                 for(int i = 0; i < dataRow.getTable().getColList().size() ; i++){
-                    Object value = dataRow.getTable().getParserList().get(i).getValue(dataRow.getRow()[i]);
-                    dataEntryBuilder.putFiled(dataRow.getTable().getColList().get(i), value.toString());
+                    Object[] value = new Object[2];
+                    if(null != dataRow.getRowBeforeUpdate()){
+                        value[0] = dataRow.getTable().getParserList().get(i).getValue(dataRow.getRowBeforeUpdate()[i]);
+                    }
+                    if(null != dataRow.getRowBeforeUpdate()){
+                        value[1] = dataRow.getTable().getParserList().get(i).getValue(dataRow.getRow()[i]);
+                    }
+                    dataEntryBuilder.putFiled(dataRow.getTable().getColList().get(i), JSON.toJSONString(value));
                 }
                 SourceDataEntry sourceDataEntry = dataEntryBuilder.buildSourceDataEntry(
                     MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8"),
@@ -63,7 +74,7 @@ public class MysqlTask extends SourceTask {
                 res.add(sourceDataEntry);
             }
         } catch (Exception e) {
-            System.out.println(e);
+            log.error("Mysql task poll error, current config:" + JSON.toJSONString(config), e);
         }
         return res;
     }
@@ -86,7 +97,7 @@ public class MysqlTask extends SourceTask {
             }
             this.replicator = new Replicator(config);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Mysql task start failed.", e);
         }
         this.replicator.start();
     }

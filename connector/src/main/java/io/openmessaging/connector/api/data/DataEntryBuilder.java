@@ -76,19 +76,4 @@ public class DataEntryBuilder {
             throw new RuntimeException(fieldName + " is not a valid field name");
         return field;
     }
-
-    public static void main(String args[]){
-        Map<Long, String> map = new HashMap<>();
-        map.put(0L, "0");
-        map.put(3L, "3");
-
-        map.put(2L, "2");
-        map.put(4L, "4");
-
-        map.put(1L, "1");
-        for(Map.Entry<Long, String> entry:map.entrySet()){
-            System.out.println(entry.getKey());
-
-        }
-    }
 }

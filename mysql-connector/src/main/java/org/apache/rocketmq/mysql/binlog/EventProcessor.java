@@ -118,54 +118,52 @@ public class EventProcessor {
 
     private void doProcess() {
 
-        new Thread(new Runnable() {
-            @Override public void run() {
-                while (true) {
+        new Thread(() -> {
+            while (true) {
 
-                    if(stopped){
-                        break;
-                    }
-                    try {
-                        Event event = queue.poll(1000, TimeUnit.MILLISECONDS);
-                        if (event == null) {
-                            checkConnection();
-                            continue;
-                        }
-
-                        switch (event.getHeader().getEventType()) {
-                            case TABLE_MAP:
-                                processTableMapEvent(event);
-                                break;
-
-                            case WRITE_ROWS:
-                            case EXT_WRITE_ROWS:
-                                processWriteEvent(event);
-                                break;
-
-                            case UPDATE_ROWS:
-                            case EXT_UPDATE_ROWS:
-                                processUpdateEvent(event);
-                                break;
-
-                            case DELETE_ROWS:
-                            case EXT_DELETE_ROWS:
-                                processDeleteEvent(event);
-                                break;
-
-                            case QUERY:
-                                processQueryEvent(event);
-                                break;
-
-                            case XID:
-                                processXidEvent(event);
-                                break;
-
-                        }
-                    } catch (Exception e) {
-                        LOGGER.error("Binlog process error.", e);
-                    }
-
+                if(stopped){
+                    break;
                 }
+                try {
+                    Event event = queue.poll(1000, TimeUnit.MILLISECONDS);
+                    if (event == null) {
+                        checkConnection();
+                        continue;
+                    }
+
+                    switch (event.getHeader().getEventType()) {
+                        case TABLE_MAP:
+                            processTableMapEvent(event);
+                            break;
+
+                        case WRITE_ROWS:
+                        case EXT_WRITE_ROWS:
+                            processWriteEvent(event);
+                            break;
+
+                        case UPDATE_ROWS:
+                        case EXT_UPDATE_ROWS:
+                            processUpdateEvent(event);
+                            break;
+
+                        case DELETE_ROWS:
+                        case EXT_DELETE_ROWS:
+                            processDeleteEvent(event);
+                            break;
+
+                        case QUERY:
+                            processQueryEvent(event);
+                            break;
+
+                        case XID:
+                            processXidEvent(event);
+                            break;
+
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Binlog process error.", e);
+                }
+
             }
         }).start();
 
@@ -202,7 +200,7 @@ public class EventProcessor {
         List<Serializable[]> list = data.getRows();
 
         for (Serializable[] row : list) {
-            addRow(EntryType.CREATE, tableId, row);
+            addRow(EntryType.CREATE, tableId, row, null);
         }
     }
 
@@ -212,7 +210,7 @@ public class EventProcessor {
         List<Map.Entry<Serializable[], Serializable[]>> list = data.getRows();
 
         for (Map.Entry<Serializable[], Serializable[]> entry : list) {
-            addRow(EntryType.UPDATE, tableId, entry.getValue());
+            addRow(EntryType.UPDATE, tableId, entry.getValue(), entry.getKey());
         }
     }
 
@@ -222,7 +220,7 @@ public class EventProcessor {
         List<Serializable[]> list = data.getRows();
 
         for (Serializable[] row : list) {
-            addRow(EntryType.DELETE, tableId, row);
+            addRow(EntryType.DELETE, tableId, null, row);
         }
 
     }
@@ -256,7 +254,7 @@ public class EventProcessor {
         transaction = new Transaction(config);
     }
 
-    private void addRow(EntryType type, Long tableId, Serializable[] row) {
+    private void addRow(EntryType type, Long tableId, Serializable[] row, Serializable[] rowBeforeUpdate) {
 
         if (transaction == null) {
             transaction = new Transaction(config);
@@ -266,7 +264,7 @@ public class EventProcessor {
         if (t != null) {
 
             while (true) {
-                if (transaction.addRow(type, t, row)) {
+                if (transaction.addRow(type, t, row, rowBeforeUpdate)) {
                     break;
 
                 } else {

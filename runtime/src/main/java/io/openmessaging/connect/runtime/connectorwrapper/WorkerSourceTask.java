@@ -92,7 +92,7 @@ public class WorkerSourceTask implements Runnable {
             Object[] newPayload = new Object[1];
             newPayload[0] = Base64.getEncoder().encodeToString(payload);
             sourceDataEntry.setPayload(newPayload);
-            Message sourceMessage = producer.createBytesMessage(taskConfig.getString(RuntimeConfigDefine.QUEUE_NAME), JSON.toJSONString(sourceDataEntry).getBytes());
+            Message sourceMessage = producer.createBytesMessage(sourceDataEntry.getQueueName(), JSON.toJSONString(sourceDataEntry).getBytes());
 
             Future<SendResult> sendResult = producer.sendAsync(sourceMessage);
             sendResult.addListener((future) -> {

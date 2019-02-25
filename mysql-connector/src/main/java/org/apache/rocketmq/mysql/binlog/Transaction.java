@@ -29,6 +29,7 @@ import org.apache.rocketmq.mysql.position.BinlogPosition;
 import org.apache.rocketmq.mysql.schema.Table;
 
 public class Transaction {
+
     private BinlogPosition nextBinlogPosition;
     private Long xid;
 
@@ -40,12 +41,12 @@ public class Transaction {
         this.config = config;
     }
 
-    public boolean addRow(EntryType type, Table table, Serializable[] row) {
+    public boolean addRow(EntryType type, Table table, Serializable[] row, Serializable[] rowBeforeUpdate) {
 
         if (list.size() == config.maxTransactionRows) {
             return false;
         } else {
-            DataRow dataRow = new DataRow(type, table, row);
+            DataRow dataRow = new DataRow(type, table, row, rowBeforeUpdate);
             list.add(dataRow);
             return true;
         }
