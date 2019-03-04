@@ -54,7 +54,7 @@ public class WorkerSourceTask implements Runnable {
     public void run() {
         try {
             sourceTask.initialize(new SourceTaskContext() {
-                @Override public PositionStorageReader offsetStorageReader() {
+                @Override public PositionStorageReader positionStorageReader() {
                     return positionStorageReader;
                 }
 

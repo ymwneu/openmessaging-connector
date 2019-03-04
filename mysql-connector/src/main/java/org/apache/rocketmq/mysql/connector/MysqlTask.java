@@ -63,7 +63,7 @@ public class MysqlTask extends SourceTask {
                     if(null != dataRow.getRowBeforeUpdate()){
                         value[0] = dataRow.getTable().getParserList().get(i).getValue(dataRow.getRowBeforeUpdate()[i]);
                     }
-                    if(null != dataRow.getRowBeforeUpdate()){
+                    if(null != dataRow.getRow()){
                         value[1] = dataRow.getTable().getParserList().get(i).getValue(dataRow.getRow()[i]);
                     }
                     dataEntryBuilder.putFiled(dataRow.getTable().getColList().get(i), JSON.toJSONString(value));
@@ -85,7 +85,7 @@ public class MysqlTask extends SourceTask {
         try {
             this.config = new Config();
             this.config.load(props);
-            byte[] positionInfo = this.context.offsetStorageReader().getPosition(MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8"));
+            byte[] positionInfo = this.context.positionStorageReader().getPosition(MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8"));
             if (null != positionInfo && positionInfo.length > 0) {
 
                 String positionJson = new String(positionInfo, "UTF-8");
