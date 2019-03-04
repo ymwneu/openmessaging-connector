@@ -86,6 +86,7 @@ public class MysqlTask extends SourceTask {
             this.config = new Config();
             this.config.load(props);
             byte[] positionInfo = this.context.positionStorageReader().getPosition(MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8"));
+
             if (null != positionInfo && positionInfo.length > 0) {
 
                 String positionJson = new String(positionInfo, "UTF-8");

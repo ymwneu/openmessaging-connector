@@ -6,7 +6,6 @@ import io.openmessaging.KeyValue;
 import io.openmessaging.Message;
 import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import io.openmessaging.connect.runtime.common.LoggerName;
-import io.openmessaging.connect.runtime.config.RuntimeConfigDefine;
 import io.openmessaging.connector.api.PositionStorageReader;
 import io.openmessaging.connector.api.data.Converter;
 import io.openmessaging.connector.api.data.SourceDataEntry;
