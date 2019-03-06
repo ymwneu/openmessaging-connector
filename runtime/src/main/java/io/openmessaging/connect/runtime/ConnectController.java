@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime;
 
 import io.openmessaging.MessagingAccessPoint;
@@ -10,6 +27,7 @@ import io.openmessaging.connect.runtime.service.ClusterManagementService;
 import io.openmessaging.connect.runtime.service.ClusterManagementServiceImpl;
 import io.openmessaging.connect.runtime.service.ConfigManagementService;
 import io.openmessaging.connect.runtime.service.ConfigManagementServiceImpl;
+import io.openmessaging.connect.runtime.service.MessagingAccessWrapper;
 import io.openmessaging.connect.runtime.service.PositionManagementService;
 import io.openmessaging.connect.runtime.service.PositionManagementServiceImpl;
 import io.openmessaging.connect.runtime.service.RebalanceImpl;
@@ -19,30 +37,69 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Connect controller to access and control all resource in runtime.
+ */
 public class ConnectController {
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.OMS_RUNTIME);
 
+    /**
+     * Configuration of current runtime.
+     */
     private final ConnectConfig connectConfig;
+
+    /**
+     * All the configurations of current running connectors and tasks in cluster.
+     */
     private final ConfigManagementService configManagementService;
+
+    /**
+     * Position management of source tasks.
+     */
     private final PositionManagementService positionManagementService;
+
+    /**
+     * Manage the online info of the cluster.
+     */
     private final ClusterManagementService clusterManagementService;
+
+    /**
+     * A worker to schedule all connectors and tasks assigned to current process.
+     */
     private final Worker worker;
-    private final MessagingAccessPoint messagingAccessPoint;
+
+    /**
+     * OpenMessaging access point, which is capable of creating producer, consumer and other facility entities.
+     */
+    private final MessagingAccessWrapper messagingAccessWrapper;
+
+    /**
+     * A REST handler, interacting with user.
+     */
     private final RestHandler restHandler;
+
+    /**
+     * Assign all connectors and tasks to all alive process in the cluster.
+     */
     private final RebalanceImpl rebalanceImpl;
+
+    /**
+     * Thread pool to run schedule task.
+     */
     private ScheduledExecutorService scheduledExecutorService;
 
     public ConnectController(ConnectConfig connectConfig) {
 
         this.connectConfig = connectConfig;
-        this.messagingAccessPoint = OMS.getMessagingAccessPoint(connectConfig.getOmsDriverUrl());
-        this.clusterManagementService = new ClusterManagementServiceImpl(connectConfig, messagingAccessPoint);
-        this.configManagementService = new ConfigManagementServiceImpl(connectConfig, messagingAccessPoint);
-        this.positionManagementService = new PositionManagementServiceImpl(connectConfig, messagingAccessPoint);
-        this.worker = new Worker(connectConfig, positionManagementService, messagingAccessPoint);
+        this.messagingAccessWrapper = new MessagingAccessWrapper();
+        MessagingAccessPoint messageAccessPoint = messagingAccessWrapper.getMessageAccessPoint(connectConfig.getOmsDriverUrl());
+        this.clusterManagementService = new ClusterManagementServiceImpl(connectConfig, messageAccessPoint);
+        this.configManagementService = new ConfigManagementServiceImpl(connectConfig, messageAccessPoint);
+        this.positionManagementService = new PositionManagementServiceImpl(connectConfig, messageAccessPoint);
+        this.worker = new Worker(connectConfig, positionManagementService, messagingAccessWrapper);
         this.rebalanceImpl = new RebalanceImpl(worker, configManagementService, clusterManagementService);
-        restHandler = new RestHandler(this);
+        this.restHandler = new RestHandler(this);
     }
 
     public void initialize(){
@@ -52,11 +109,12 @@ public class ConnectController {
 
     public void start(){
 
-        messagingAccessPoint.startup();
         clusterManagementService.start();
         configManagementService.start();
         positionManagementService.start();
         worker.start();
+
+        // Persist configurations of current connectors and tasks.
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
 
             try {
@@ -66,6 +124,7 @@ public class ConnectController {
             }
         }, 1000, 20*1000, TimeUnit.MILLISECONDS);
 
+        // Persist position information of source tasks.
         this.scheduledExecutorService.scheduleAtFixedRate(() -> {
 
             try {
@@ -77,10 +136,6 @@ public class ConnectController {
     }
 
     public void shutdown(){
-
-        if(messagingAccessPoint != null){
-            messagingAccessPoint.shutdown();
-        }
 
         if(clusterManagementService != null){
             clusterManagementService.stop();
@@ -112,6 +167,8 @@ public class ConnectController {
         } catch (InterruptedException e) {
             log.error("shutdown scheduledExecutorService error.", e);
         }
+
+        messagingAccessWrapper.removeAllMessageAccessPoint();
     }
 
     public ConnectConfig getConnectConfig() {
@@ -134,8 +191,8 @@ public class ConnectController {
         return worker;
     }
 
-    public MessagingAccessPoint getMessagingAccessPoint() {
-        return messagingAccessPoint;
+    public MessagingAccessWrapper getMessagingAccessWrapper() {
+        return messagingAccessWrapper;
     }
 
     public RestHandler getRestHandler() {
