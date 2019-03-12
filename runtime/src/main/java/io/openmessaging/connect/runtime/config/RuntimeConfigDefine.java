@@ -31,6 +31,8 @@ public class RuntimeConfigDefine {
      */
     public static final String CONNECTOR_CLASS = "connector-class";
 
+    public static final String TASK_CLASS = "task-class";
+
     /**
      * OMS driver url for the connector.
      */

@@ -200,7 +200,7 @@ public class Worker {
 
         for(String connectorName : newTasks.keySet()){
             for(ConnectKeyValue keyValue : newTasks.get(connectorName)){
-                Class taskClazz = Class.forName(keyValue.getString(RuntimeConfigDefine.CONNECTOR_CLASS));
+                Class taskClazz = Class.forName(keyValue.getString(RuntimeConfigDefine.TASK_CLASS));
                 Task task = (Task) taskClazz.newInstance();
 
                 Class converterClazz = Class.forName(keyValue.getString(RuntimeConfigDefine.SOURCE_RECORD_CONVERTER));
