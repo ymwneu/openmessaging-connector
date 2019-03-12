@@ -1,16 +1,36 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime.connectorwrapper;
 
 import io.netty.util.internal.ConcurrentSet;
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.common.ConnectKeyValue;
-import io.openmessaging.connect.runtime.config.RuntimeConfigDefine;
-import io.openmessaging.connect.runtime.service.TaskPositionCommitService;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
+import io.openmessaging.connect.runtime.config.RuntimeConfigDefine;
+import io.openmessaging.connect.runtime.service.MessagingAccessWrapper;
 import io.openmessaging.connect.runtime.service.PositionManagementService;
+import io.openmessaging.connect.runtime.service.TaskPositionCommitService;
 import io.openmessaging.connect.runtime.store.PositionStorageReaderImpl;
 import io.openmessaging.connector.api.Connector;
 import io.openmessaging.connector.api.Task;
 import io.openmessaging.connector.api.data.Converter;
+import io.openmessaging.connector.api.data.SinkDataEntry;
+import io.openmessaging.connector.api.data.SourceDataEntry;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.producer.Producer;
 import java.util.ArrayList;
@@ -21,33 +41,56 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 
+/**
+ * A worker to schedule all connectors and tasks in a process.
+ */
 public class Worker {
 
+    /**
+     * Current worker id.
+     */
     private final String workerId;
-    private Set<WorkerConnector> workingConnectors = new ConcurrentSet<>();
-    private Set<WorkerSourceTask> workingTasks = new ConcurrentSet<>();
-    private final ExecutorService taskExecutor;
-    private PositionManagementService positionManagementService;
-    private MessagingAccessPoint messagingAccessPoint;
-    private TaskPositionCommitService taskPositionCommitService;
 
-    private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "WorkerScheduledThread");
-        }
-    });
+    /**
+     * Current running connectors.
+     */
+    private Set<WorkerConnector> workingConnectors = new ConcurrentSet<>();
+
+    /**
+     * Current running tasks.
+     */
+    private Set<WorkerSourceTask> workingTasks = new ConcurrentSet<>();
+
+    /**
+     * Thread pool for connectors and tasks.
+     */
+    private final ExecutorService taskExecutor;
+
+    /**
+     * Position management for source tasks.
+     */
+    private PositionManagementService positionManagementService;
+
+    /**
+     * OMS driver url, which determine the specific MQ to send and consume message.
+     * The MQ is used send {@link SourceDataEntry} or consume {@link SinkDataEntry}.
+     */
+    private MessagingAccessWrapper messagingAccessWrapper;
+
+    /**
+     * A scheduled task to commit source position of source tasks.
+     */
+    private TaskPositionCommitService taskPositionCommitService;
 
     public Worker(ConnectConfig connectConfig,
         PositionManagementService positionManagementService,
-        MessagingAccessPoint messagingAccessPoint) {
+        MessagingAccessWrapper messagingAccessWrapper) {
+
         this.workerId = connectConfig.getWorkerId();
         this.taskExecutor = Executors.newCachedThreadPool();
         this.positionManagementService = positionManagementService;
-        this.messagingAccessPoint = messagingAccessPoint;
+        this.messagingAccessWrapper = messagingAccessWrapper;
         taskPositionCommitService = new TaskPositionCommitService(this);
     }
 
@@ -55,8 +98,14 @@ public class Worker {
         taskPositionCommitService.start();
     }
 
+    /**
+     * Start a collection of connectors with the given configs.
+     * If a connector is already started with the same configs, it will not start again.
+     * If a connector is already started but not contained in the new configs, it will stop.
+     * @param connectorConfigs
+     * @throws Exception
+     */
     public synchronized void startConnectors(Map<String, ConnectKeyValue> connectorConfigs) throws Exception {
-
 
         Set<WorkerConnector> stoppedConnector = new HashSet<>();
         for(WorkerConnector workerConnector : workingConnectors){
@@ -98,6 +147,13 @@ public class Worker {
         }
     }
 
+    /**
+     * Start a collection of tasks with the given configs.
+     * If a task is already started with the same configs, it will not start again.
+     * If a task is already started but not contained in the new configs, it will stop.
+     * @param taskConfigs
+     * @throws Exception
+     */
     public synchronized void startTasks(Map<String, List<ConnectKeyValue>> taskConfigs) throws Exception {
 
         Set<WorkerSourceTask> stoppedTasks = new HashSet<>();
@@ -151,7 +207,8 @@ public class Worker {
                 Converter recordConverter = (Converter) converterClazz.newInstance();
 
                 if(task instanceof SourceTask){
-                    Producer producer = messagingAccessPoint.createProducer();
+                    Producer producer = messagingAccessWrapper
+                        .getMessageAccessPoint(keyValue.getString(RuntimeConfigDefine.OMS_DRIVER_URL)).createProducer();
                     producer.startup();
                     WorkerSourceTask workerSourceTask = new WorkerSourceTask(connectorName,
                                 (SourceTask) task, keyValue,
@@ -163,6 +220,9 @@ public class Worker {
         }
     }
 
+    /**
+     * Commit the position of all working tasks to PositionManagementService.
+     */
     public void commitTaskPosition() {
         Map<byte[], byte[]> positionData = new HashMap<>();
         for(WorkerSourceTask task : workingTasks){

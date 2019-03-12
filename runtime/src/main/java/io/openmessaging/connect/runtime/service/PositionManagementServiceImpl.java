@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.MessagingAccessPoint;
@@ -19,10 +36,24 @@ import java.util.Set;
 
 public class PositionManagementServiceImpl implements PositionManagementService {
 
+    /**
+     * Default topic to send/consume position change message.
+     */
     private static final String POSITION_MESSAGE_TOPIC = "position-topic";
 
+    /**
+     * Current position info in store.
+     */
     private KeyValueStore<byte[], byte[]> positionStore;
+
+    /**
+     * Synchronize data with other workers.
+     */
     private DataSynchronizer<String, Map<byte[], byte[]>> dataSynchronizer;
+
+    /**
+     * Listeners.
+     */
     private Set<PositionUpdateListener> positionUpdateListener;
 
     public PositionManagementServiceImpl(ConnectConfig connectConfig,
@@ -63,6 +94,7 @@ public class PositionManagementServiceImpl implements PositionManagementService 
 
     @Override
     public Map<byte[], byte[]> getPositionTable() {
+
         return positionStore.getKVMap();
     }
 
@@ -104,6 +136,7 @@ public class PositionManagementServiceImpl implements PositionManagementService 
 
         @Override
         public void onCompletion(Throwable error, String key, Map<byte[], byte[]> result) {
+
             // update positionStore
             PositionManagementServiceImpl.this.persist();
 
@@ -133,6 +166,11 @@ public class PositionManagementServiceImpl implements PositionManagementService 
         }
     }
 
+    /**
+     * Merge new received position info with local store.
+     * @param result
+     * @return
+     */
     private boolean mergePositionInfo(Map<byte[], byte[]> result) {
 
         boolean changed = false;

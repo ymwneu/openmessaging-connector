@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime;
 
 import io.openmessaging.connect.runtime.common.LoggerName;
@@ -13,9 +30,13 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Startup class of the runtime worker.
+ */
 public class ConnectStartup {
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.OMS_RUNTIME);
@@ -27,17 +48,33 @@ public class ConnectStartup {
     public static Properties properties = null;
 
     public static void main(String[] args) {
+
         start(createConnectController(args));
     }
 
     private static void start(ConnectController controller) {
-        controller.start();
+
+        try {
+            controller.start();
+            String tip = "The worker [" + controller.getWorker().getWorkerId() + "] boot success.";
+            log.info(tip);
+            System.out.printf("%s%n", tip);
+        }catch(Throwable e){
+            e.printStackTrace();
+            System.exit(-1);
+        }
     }
 
+    /**
+     * Read configs from command line and create connect controller.
+     * @param args
+     * @return
+     */
     private static ConnectController createConnectController(String[] args) {
 
         try {
 
+            // Build the command line options.
             Options options = ServerUtil.buildCommandlineOptions(new Options());
             commandLine = ServerUtil.parseCmdLine("connect", args, buildCommandlineOptions(options),
                 new PosixParser());
@@ -45,6 +82,7 @@ public class ConnectStartup {
                 System.exit(-1);
             }
 
+            // Load configs from command line.
             ConnectConfig connectConfig = new ConnectConfig();
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
@@ -60,9 +98,11 @@ public class ConnectStartup {
                 }
             }
 
+            // Create controller and initialize.
             ConnectController controller = new ConnectController(connectConfig);
             controller.initialize();
 
+            // Invoked when shutdown.
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 private volatile boolean hasShutdown = false;
                 private AtomicInteger shutdownTimes = new AtomicInteger(0);

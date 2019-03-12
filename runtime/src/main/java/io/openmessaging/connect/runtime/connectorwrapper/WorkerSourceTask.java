@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime.connectorwrapper;
 
 import com.alibaba.fastjson.JSON;
@@ -21,17 +38,51 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * A wrapper of {@link SourceTask} for runtime.
+ */
 public class WorkerSourceTask implements Runnable {
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.OMS_RUNTIME);
 
+    /**
+     * Connector name of current task.
+     */
     private String connectorName;
+
+    /**
+     * The implements of the source task.
+     */
     private SourceTask sourceTask;
+
+    /**
+     * The configs of current source task.
+     */
     private ConnectKeyValue taskConfig;
+
+    /**
+     * A switch for the source task.
+     */
     private AtomicBoolean isStopping;
+
+    /**
+     * Used to read the position of source data source.
+     */
     private PositionStorageReader positionStorageReader;
+
+    /**
+     * A OMS producer to send message to dest MQ.
+     */
     private Producer producer;
+
+    /**
+     * A converter to parse source data entry to byte[].
+     */
     private Converter recordConverter;
+
+    /**
+     * Current position info of the source task.
+     */
     private Map<byte[], byte[]> positionData = new HashMap<>();
 
     public WorkerSourceTask(String connectorName,
@@ -49,6 +100,9 @@ public class WorkerSourceTask implements Runnable {
         this.recordConverter = recordConverter;
     }
 
+    /**
+     * Start a source task, and send data entry to MQ cyclically.
+     */
     @Override
     public void run() {
         try {
@@ -83,6 +137,10 @@ public class WorkerSourceTask implements Runnable {
         sourceTask.stop();
     }
 
+    /**
+     * Send list of sourceDataEntries to MQ.
+     * @param sourceDataEntries
+     */
     private void sendRecord(Collection<SourceDataEntry> sourceDataEntries) {
 
         for(SourceDataEntry sourceDataEntry : sourceDataEntries){

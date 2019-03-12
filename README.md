@@ -20,38 +20,84 @@ A connector follows OpenMessaging Connect could run with any message queues whic
 OpenMessaging Connect provides a standalone runtime which uses OpenMessaging API for sending and consuming message,
 as well as the key/value operations for offset management.
 
-
-
 ## Connector
 
-`void start(KeyValue config)`
-<br>Start the connector with the given config.
+This runtime is based on interface [openmessaging-connector](https://github.com/openmessaging/openmessaging-connector).
 
-`void stop()`
-<br>Stop the connector.
+## Runtime quick start
 
-`Class<? extends Task> taskClass()`
-<br>Returns the Task implementation for this Connector.
+### Prerequisite
 
-`List<KeyValue> taskConfigs()`
-<br>Returns a set of configurations for Tasks based on the current configuration.
+* 64bit JDK 1.8+;
+* Maven 3.2.x;
+* A running MQ cluster;
 
-## Task
+### Build
 
-`void start(KeyValue config)`
-<br>Start the task with the given config.
+```
+mvn clean install -DskipTests
+```
 
-`void stop()`
-<br>Stop the task.
+### Run Command Line
 
-### Source task
+```
+## Start Runtime Worker with default config.
+java -jar runtime/target/ConnectStartup.jar
 
-`Collection<Message> poll()`
-<br>Return a collection of message entries to send.
+## Start Runtime Server with config file.
+java -jar runtime/target/ConnectStartup.jar -c runtime/connect.conf
+```
 
-### Sink task
+### Log Path
 
-`void put(Collection<Message> message)`
-<br>Put the data entries to the sink.
+```
+${user.home}/logs/omsconnect/
+```
+
+If you see "The worker XXX boot success." without any exception, it means worker started successfully.
+
+### Make Sure Worker Started Successfully
+
+Use http request to get all alive workers in cluster:
+```
+GET /getClusterInfo
+```
+You will see all alive workers' id with latest heartbeat timestamp.
+
+### Run The Example Mysql Source Connector
+
+Use the following http request, to start a mysql source connector as an example.
+```
+GET http://(your worker ip):(port)/connectors/(Your connector name)?config={"connector-class":"org.apache.rocketmq.mysql.connector.MysqlConnector","oms-driver-url":"oms:rocketmq://localhost:9876/default:default","mysqlAddr":"localhost","mysqlPort":"3306","mysqlUsername":"username","mysqlPassword":"password","source-record-converter":"io.openmessaging.connect.runtime.converter.JsonConverter"}
+```
+Note to replace the arguments in "()" with your own mysql setting.
+
+#### Config introduction
+
+|key               |nullable|default    |description|
+|------------------|--------|-----------|-----------|
+|connector-class         |false   |           |Full class name of the impl of connector|
+|oms-driver-url         |false   |           |An OMS driver url, the data will send to the specified MQ|
+|mysqlAddr        |false   |           |MySQL address|
+|mysqlPort         |false   |           |MySQL port|
+|mysqlUsername         |false   |           |Username of MySQL account|
+|mysqlPassword         |false   |           |Password of MySQL account|
+|source-record-converter         |false   |           |Full class name of the impl of the converter used to convert SourceDataEntry to byte[]|
 
 
+### Verify Mysql Source Connector Started Successfully
+
+Make a mysql row update, your will found the MQ you config receive a message, and the message's topic name is the table name.
+
+## Note
+
+Module example-mysql-connector is just a simple example of source connector. 
+This module is base on [RocketMQ Mysql](https://github.com/apache/rocketmq-externals/tree/master/rocketmq-mysql) with a little code modified in order to implement connector interface.
+User can reference this module to implement other source or sink connector.
+
+## RoadMap
+
+1. Implement WorkerSinkTask wrapper in runtime;
+2. Import openMessaging impl and connector impl dynamically in runtime, rather than import them in pom file;
+3. An overall optimization of runtime module, provide a better interaction.
+4. Implementation of various source and sink connector.
