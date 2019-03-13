@@ -26,6 +26,7 @@ import io.openmessaging.connector.api.data.Schema;
 import io.openmessaging.connector.api.data.SourceDataEntry;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.mysql.schema.column.ColumnParser;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -86,8 +87,8 @@ public class MysqlTask extends SourceTask {
                     dataEntryBuilder.putFiled(dataRow.getTable().getColList().get(i), JSON.toJSONString(value));
                 }
                 SourceDataEntry sourceDataEntry = dataEntryBuilder.buildSourceDataEntry(
-                    MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8"),
-                    jsonObject.toJSONString().getBytes("UTF-8"));
+                    ByteBuffer.wrap(MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8")),
+                    ByteBuffer.wrap(jsonObject.toJSONString().getBytes("UTF-8")));
                 res.add(sourceDataEntry);
             }
         } catch (Exception e) {
@@ -102,11 +103,13 @@ public class MysqlTask extends SourceTask {
         try {
             this.config = new Config();
             this.config.load(props);
-            byte[] positionInfo = this.context.positionStorageReader().getPosition(MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8"));
+            ByteBuffer positionInfo = this.context.positionStorageReader().getPosition(
+                                            ByteBuffer.wrap(
+                                                MysqlConstants.getPartition(config.mysqlAddr, config.mysqlPort).getBytes("UTF-8")));
 
-            if (null != positionInfo && positionInfo.length > 0) {
+            if (null != positionInfo && positionInfo.array().length > 0) {
 
-                String positionJson = new String(positionInfo, "UTF-8");
+                String positionJson = new String(positionInfo.array(), "UTF-8");
                 JSONObject jsonObject = JSONObject.parseObject(positionJson);
                 this.config.startType = "SPECIFIED";
                 this.config.binlogFilename = jsonObject.getString(MysqlConstants.BINLOG_FILENAME);
