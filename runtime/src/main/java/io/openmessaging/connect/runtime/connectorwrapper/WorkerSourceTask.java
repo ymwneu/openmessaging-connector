@@ -144,13 +144,11 @@ public class WorkerSourceTask implements Runnable {
     private void sendRecord(Collection<SourceDataEntry> sourceDataEntries) {
 
         for(SourceDataEntry sourceDataEntry : sourceDataEntries){
-
             byte[] payload = recordConverter.objectToByte(sourceDataEntry.getPayload());
             Object[] newPayload = new Object[1];
             newPayload[0] = Base64.getEncoder().encodeToString(payload);
             sourceDataEntry.setPayload(newPayload);
             Message sourceMessage = producer.createBytesMessage(sourceDataEntry.getQueueName(), JSON.toJSONString(sourceDataEntry).getBytes());
-
             Future<SendResult> sendResult = producer.sendAsync(sourceMessage);
             sendResult.addListener((future) -> {
 
