@@ -149,7 +149,7 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
             for(String key : keyValue.keySet()){
                 newKeyValue.put(key, keyValue.getString(key));
             }
-            newKeyValue.put(RuntimeConfigDefine.CONNECTOR_CLASS, connector.taskClass().getName());
+            newKeyValue.put(RuntimeConfigDefine.TASK_CLASS, connector.taskClass().getName());
             newKeyValue.put(RuntimeConfigDefine.OMS_DRIVER_URL, configs.getString(RuntimeConfigDefine.OMS_DRIVER_URL));
             newKeyValue.put(RuntimeConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
             converterdConfigs.add(newKeyValue);
