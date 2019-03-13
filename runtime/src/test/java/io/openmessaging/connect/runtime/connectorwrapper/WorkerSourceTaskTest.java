@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime.connectorwrapper;
 
 import io.openmessaging.BytesMessage;
@@ -26,14 +43,11 @@ public class WorkerSourceTaskTest {
     @Mock
     private Producer producer;
 
-    @Mock
-    private MessagingAccessPoint messagingAccessPoint;
-
     private WorkerSourceTask workerSourceTask;
 
     @Test
     public void testRun() {
-        doReturn(producer).when(messagingAccessPoint).createProducer();
+
         doAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
@@ -46,7 +60,7 @@ public class WorkerSourceTaskTest {
             }
         }).when(producer).createBytesMessage(anyString(), any(byte[].class));
         ConnectKeyValue connectKeyValue = new ConnectKeyValue();
-        connectKeyValue.getProperties().put("key1", "TEST-TASK-1");
+        connectKeyValue.put("key1", "TEST-TASK-1");
         workerSourceTask = new WorkerSourceTask("TEST-CONN",
                 new TestSourceTask(),
                 connectKeyValue,
@@ -55,8 +69,6 @@ public class WorkerSourceTaskTest {
                 producer
         );
         workerSourceTask.run();
-        producer.startup();
-        verify(producer, times(1)).startup();
         verify(producer, times(1)).sendAsync(any(Message.class));
     }
 }

@@ -25,16 +25,19 @@ import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import io.openmessaging.connect.runtime.common.LoggerName;
 import io.openmessaging.connector.api.PositionStorageReader;
 import io.openmessaging.connector.api.data.Converter;
+import io.openmessaging.connector.api.data.DataEntry;
 import io.openmessaging.connector.api.data.SourceDataEntry;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.connector.api.source.SourceTaskContext;
 import io.openmessaging.producer.Producer;
 import io.openmessaging.producer.SendResult;
+import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.xml.crypto.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,7 +86,7 @@ public class WorkerSourceTask implements Runnable {
     /**
      * Current position info of the source task.
      */
-    private Map<byte[], byte[]> positionData = new HashMap<>();
+    private Map<ByteBuffer, ByteBuffer> positionData = new HashMap<>();
 
     public WorkerSourceTask(String connectorName,
                             SourceTask sourceTask,
@@ -123,16 +126,18 @@ public class WorkerSourceTask implements Runnable {
                     sendRecord(toSendEntries);
                 }
             }
+            log.info("task stop, config:"+ JSON.toJSONString(taskConfig));
         }catch(Exception e){
             log.error("Run task failed.", e);
         }
     }
 
-    public Map<byte[], byte[]> getPositionData() {
+    public Map<ByteBuffer, ByteBuffer> getPositionData() {
         return positionData;
     }
 
     public void stop(){
+        isStopping.set(true);
         producer.shutdown();
         sourceTask.stop();
     }
@@ -144,6 +149,10 @@ public class WorkerSourceTask implements Runnable {
     private void sendRecord(Collection<SourceDataEntry> sourceDataEntries) {
 
         for(SourceDataEntry sourceDataEntry : sourceDataEntries){
+            ByteBuffer partition = sourceDataEntry.getSourcePartition();
+            ByteBuffer position = sourceDataEntry.getSourcePosition();
+            sourceDataEntry.setSourcePartition(null);
+            sourceDataEntry.setSourcePosition(null);
             byte[] payload = recordConverter.objectToByte(sourceDataEntry.getPayload());
             Object[] newPayload = new Object[1];
             newPayload[0] = Base64.getEncoder().encodeToString(payload);
@@ -157,8 +166,7 @@ public class WorkerSourceTask implements Runnable {
                 }else{
                     try {
                         // send ok
-                        byte[] partition = sourceDataEntry.getSourcePartition();
-                        byte[] position = sourceDataEntry.getSourcePosition();
+
                         if(null != partition && null != position){
                             positionData.put(partition, position);
                         }

@@ -103,7 +103,7 @@ public class BrokerBasedLog<K, V> implements DataSynchronizer<K, V>{
                     context.ack();
                     return;
                 }
-                log.info("Received one message: %s%n", message.sysHeaders().getString(Message.BuiltinKeys.MESSAGE_ID));
+                log.info("Received one message: " + message.sysHeaders().getString(Message.BuiltinKeys.MESSAGE_ID) + "\n");
                 byte[] bytes = message.getBody(byte[].class);
                 Map<K, V> map = decodeKeyValue(bytes);
                 for (K key : map.keySet()) {
@@ -132,9 +132,9 @@ public class BrokerBasedLog<K, V> implements DataSynchronizer<K, V>{
             result.addListener((future) -> {
 
                 if (future.getThrowable() != null) {
-                    log.error("Send async message Failed, error: %s%n", future.getThrowable());
+                    log.error("Send async message Failed, error: " + future.getThrowable());
                 } else {
-                    log.info("Send async message OK, msgId: %s%n", future.get().messageId());
+                    log.info("Send async message OK, msgId: " + future.get().messageId() + "\n");
                 }
             });
         } catch (Exception e) {

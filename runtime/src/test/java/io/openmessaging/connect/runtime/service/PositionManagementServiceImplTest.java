@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime.service;
 
 import com.alibaba.fastjson.JSONObject;
@@ -13,6 +30,7 @@ import io.openmessaging.producer.Producer;
 import io.openmessaging.producer.SendResult;
 import io.openmessaging.rocketmq.domain.BytesMessageImpl;
 //import org.apache.rocketmq.mysql.MysqlConstants;
+import java.nio.ByteBuffer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,13 +74,13 @@ public class PositionManagementServiceImplTest {
 
     private PositionManagementServiceImpl positionManagementService;
 
-    private KeyValueStore<byte[], byte[]> positionStore;
+    private KeyValueStore<ByteBuffer, ByteBuffer> positionStore;
 
-    private byte[] sourcePartition;
+    private ByteBuffer sourcePartition;
 
-    private byte[] sourcePosition;
+    private ByteBuffer sourcePosition;
 
-    private Map<byte[], byte[]> positions;
+    private Map<ByteBuffer, ByteBuffer> positions;
 
     @Before
     public void init() throws Exception {
@@ -114,14 +132,14 @@ public class PositionManagementServiceImplTest {
 
         Field positionStoreField = PositionManagementServiceImpl.class.getDeclaredField("positionStore");
         positionStoreField.setAccessible(true);
-        positionStore = (KeyValueStore<byte[], byte[]>) positionStoreField.get(positionManagementService);
+        positionStore = (KeyValueStore<ByteBuffer, ByteBuffer>) positionStoreField.get(positionManagementService);
 
-        sourcePartition = "127.0.0.13306".getBytes("UTF-8");
+        sourcePartition = ByteBuffer.wrap("127.0.0.13306".getBytes("UTF-8"));
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(MysqlConstants.BINLOG_FILENAME, "binlogFilename");
         jsonObject.put(MysqlConstants.NEXT_POSITION, "100");
-        sourcePosition = jsonObject.toJSONString().getBytes();
-        positions = new HashMap<byte[], byte[]>() {
+        sourcePosition = ByteBuffer.wrap(jsonObject.toJSONString().getBytes());
+        positions = new HashMap<ByteBuffer, ByteBuffer>() {
             {
                 put(sourcePartition, sourcePosition);
             }
@@ -136,8 +154,8 @@ public class PositionManagementServiceImplTest {
 
     @Test
     public void testGetPositionTable() {
-        Map<byte[], byte[]> positionTable = positionManagementService.getPositionTable();
-        byte[] bytes = positionTable.get(sourcePartition);
+        Map<ByteBuffer, ByteBuffer> positionTable = positionManagementService.getPositionTable();
+        ByteBuffer bytes = positionTable.get(sourcePartition);
 
         assertNull(bytes);
 
@@ -150,7 +168,7 @@ public class PositionManagementServiceImplTest {
 
     @Test
     public void testPutPosition() throws Exception {
-        byte[] bytes = positionStore.get(sourcePartition);
+        ByteBuffer bytes = positionStore.get(sourcePartition);
 
         assertNull(bytes);
 
@@ -164,11 +182,11 @@ public class PositionManagementServiceImplTest {
     @Test
     public void testRemovePosition() {
         positionManagementService.putPosition(positions);
-        byte[] bytes = positionStore.get(sourcePartition);
+        ByteBuffer bytes = positionStore.get(sourcePartition);
 
         assertNotNull(bytes);
 
-        List<byte[]> sourcePartitions = new ArrayList<byte[]>(8) {
+        List<ByteBuffer> sourcePartitions = new ArrayList<ByteBuffer>(8) {
             {
                 add(sourcePartition);
             }

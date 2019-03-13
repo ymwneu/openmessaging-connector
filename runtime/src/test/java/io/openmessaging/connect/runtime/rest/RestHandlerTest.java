@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package io.openmessaging.connect.runtime.rest;
 
 import com.alibaba.fastjson.JSON;
@@ -18,6 +35,7 @@ import io.openmessaging.connector.api.data.Converter;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.mysql.MysqlConstants;
 import io.openmessaging.producer.Producer;
+import java.nio.ByteBuffer;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
@@ -79,7 +97,7 @@ public class RestHandlerTest {
 
     private byte[] sourcePosition;
 
-    private Map<byte[], byte[]> positions;
+    private Map<ByteBuffer, ByteBuffer> positions;
 
     private static final String CREATE_CONNECTOR_URL = "http://localhost:8081/connectors/%s";
 
@@ -157,13 +175,11 @@ public class RestHandlerTest {
         jsonObject.put(MysqlConstants.BINLOG_FILENAME, "binlogFilename");
         jsonObject.put(MysqlConstants.NEXT_POSITION, "100");
         sourcePosition = jsonObject.toJSONString().getBytes();
-        positions = new HashMap<byte[], byte[]>() {
+        positions = new HashMap<ByteBuffer, ByteBuffer>() {
             {
-                put(sourcePartition, sourcePosition);
+                put(ByteBuffer.wrap(sourcePartition), ByteBuffer.wrap(sourcePosition));
             }
         };
-        when(connectController.getPositionManagementService()).thenReturn(positionManagementService);
-        when(positionManagementService.getPositionTable()).thenReturn(positions);
 
         WorkerConnector workerConnector1 = new WorkerConnector("testConnectorName1", connector, connectKeyValue);
         WorkerConnector workerConnector2 = new WorkerConnector("testConnectorName2", connector, connectKeyValue1);
@@ -223,19 +239,11 @@ public class RestHandlerTest {
         String expectedResultConfig = "ConnectorConfigs:" + JSON.toJSONString(connectorConfigs) + "\nTaskConfigs:" + JSON.toJSONString(taskConfigs);
         assertEquals(expectedResultConfig, EntityUtils.toString(httpResponse3.getEntity(), "UTF-8"));
 
-        URIBuilder uriBuilder4 = new URIBuilder(GET_POSITION_INFO_URL);
+        URIBuilder uriBuilder4 = new URIBuilder(GET_ALLOCATED_INFO_URL);
         URI uri4 = uriBuilder4.build();
         HttpGet httpGet4 = new HttpGet(uri4);
         HttpResponse httpResponse4 = httpClient.execute(httpGet4);
         assertEquals(200, httpResponse4.getStatusLine().getStatusCode());
-        String expectedResultPositions = "positionTable:" + JSON.toJSONString(positions);
-        assertEquals(expectedResultPositions, EntityUtils.toString(httpResponse4.getEntity(), "UTF-8"));
-
-        URIBuilder uriBuilder5 = new URIBuilder(GET_ALLOCATED_INFO_URL);
-        URI uri5 = uriBuilder5.build();
-        HttpGet httpGet5 = new HttpGet(uri5);
-        HttpResponse httpResponse5 = httpClient.execute(httpGet5);
-        assertEquals(200, httpResponse5.getStatusLine().getStatusCode());
         StringBuilder sb = new StringBuilder();
         sb.append("working connectors:\n");
         for (WorkerConnector workerConnector : workerConnectors) {
@@ -245,7 +253,7 @@ public class RestHandlerTest {
         for (WorkerSourceTask workerSourceTask : workerSourceTasks) {
             sb.append(workerSourceTask.toString() + "\n");
         }
-        assertEquals(sb.toString(), EntityUtils.toString(httpResponse5.getEntity(), "UTF-8"));
+        assertEquals(sb.toString(), EntityUtils.toString(httpResponse4.getEntity(), "UTF-8"));
     }
 
 }

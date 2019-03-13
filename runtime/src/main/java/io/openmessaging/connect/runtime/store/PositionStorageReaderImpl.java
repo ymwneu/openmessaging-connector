@@ -19,6 +19,7 @@ package io.openmessaging.connect.runtime.store;
 
 import io.openmessaging.connect.runtime.service.PositionManagementService;
 import io.openmessaging.connector.api.PositionStorageReader;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,30 +30,25 @@ public class PositionStorageReaderImpl implements PositionStorageReader {
     private PositionManagementService positionManagementService;
 
     public PositionStorageReaderImpl(PositionManagementService positionManagementService){
+
         this.positionManagementService = positionManagementService;
     }
 
     @Override
-    public byte[] getPosition(byte[] partition) {
-        Map<byte[], byte[]> allData = positionManagementService.getPositionTable();
+    public ByteBuffer getPosition(ByteBuffer partition) {
 
-        for(Map.Entry<byte[], byte[]> entry : allData.entrySet()){
-            if(Arrays.equals(entry.getKey(), partition)){
-                return entry.getValue();
-            }
-        }
-        return null;
+        return positionManagementService.getPositionTable().get(partition);
     }
 
     @Override
-    public Map<byte[], byte[]> getPositions(Collection<byte[]> partitions) {
-        Map<byte[], byte[]> result = new HashMap<>();
-        Map<byte[], byte[]> allData = positionManagementService.getPositionTable();
-        for(Map.Entry<byte[], byte[]> entry : allData.entrySet()){
-            for(byte[] partition : partitions){
-                if(Arrays.equals(entry.getKey(), partition)){
-                    result.put(entry.getKey(), entry.getValue());
-                }
+    public Map<ByteBuffer, ByteBuffer> getPositions(Collection<ByteBuffer> partitions) {
+
+
+        Map<ByteBuffer, ByteBuffer> result = new HashMap<>();
+        Map<ByteBuffer, ByteBuffer> allData = positionManagementService.getPositionTable();
+        for(ByteBuffer key : partitions){
+            if(allData.containsKey(key)){
+                result.put(key, allData.get(key));
             }
         }
         return result;

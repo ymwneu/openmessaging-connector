@@ -33,6 +33,7 @@ import io.openmessaging.connector.api.data.SinkDataEntry;
 import io.openmessaging.connector.api.data.SourceDataEntry;
 import io.openmessaging.connector.api.source.SourceTask;
 import io.openmessaging.producer.Producer;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -224,7 +225,7 @@ public class Worker {
      * Commit the position of all working tasks to PositionManagementService.
      */
     public void commitTaskPosition() {
-        Map<byte[], byte[]> positionData = new HashMap<>();
+        Map<ByteBuffer, ByteBuffer> positionData = new HashMap<>();
         for(WorkerSourceTask task : workingTasks){
             positionData.putAll(task.getPositionData());
         }

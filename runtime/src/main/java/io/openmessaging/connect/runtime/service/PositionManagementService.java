@@ -17,6 +17,7 @@
 
 package io.openmessaging.connect.runtime.service;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
@@ -44,18 +45,18 @@ public interface PositionManagementService {
      * Get the current position table.
      * @return
      */
-    Map<byte[], byte[]> getPositionTable();
+    Map<ByteBuffer, ByteBuffer> getPositionTable();
 
     /**
      * Put a position info.
      */
-    void putPosition(Map<byte[], byte[]> positions);
+    void putPosition(Map<ByteBuffer, ByteBuffer> positions);
 
     /**
      * Remove a position info.
      * @param partitions
      */
-    void removePosition(List<byte[]> partitions);
+    void removePosition(List<ByteBuffer> partitions);
 
     /**
      * Register a listener.

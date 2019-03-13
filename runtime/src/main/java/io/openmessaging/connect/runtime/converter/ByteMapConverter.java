@@ -21,6 +21,7 @@ import com.alibaba.fastjson.JSON;
 import io.openmessaging.connect.runtime.common.LoggerName;
 import io.openmessaging.connector.api.data.Converter;
 import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,20 +31,20 @@ import org.slf4j.LoggerFactory;
 /**
  * Byte Map to byte[].
  */
-public class ByteMapConverter implements Converter<Map<byte[], byte[]>> {
+public class ByteMapConverter implements Converter<Map<ByteBuffer, ByteBuffer>> {
 
     private static final Logger log = LoggerFactory.getLogger(LoggerName.OMS_RUNTIME);
 
     @Override
-    public byte[] objectToByte(Map<byte[], byte[]> map) {
+    public byte[] objectToByte(Map<ByteBuffer, ByteBuffer> map) {
 
         try {
             Map<String, String> resultMap = new HashMap<>();
 
-            for(Map.Entry<byte[], byte[]> entry : map.entrySet()){
-                resultMap.put(Base64.getEncoder().encodeToString(entry.getKey()), Base64.getEncoder().encodeToString(entry.getValue()));
+            for(Map.Entry<ByteBuffer, ByteBuffer> entry : map.entrySet()){
+                resultMap.put(Base64.getEncoder().encodeToString(entry.getKey().array()), Base64.getEncoder().encodeToString(entry.getValue().array()));
             }
-            return JSON.toJSONString(map).getBytes("UTF-8");
+            return JSON.toJSONString(resultMap).getBytes("UTF-8");
         } catch (Exception e) {
             log.error("ByteMapConverter#objectToByte failed", e);
         }
@@ -51,16 +52,16 @@ public class ByteMapConverter implements Converter<Map<byte[], byte[]>> {
     }
 
     @Override
-    public Map<byte[], byte[]> byteToObject(byte[] bytes) {
+    public Map<ByteBuffer, ByteBuffer> byteToObject(byte[] bytes) {
 
-        Map<byte[], byte[]> resultMap = new HashMap<>();
+        Map<ByteBuffer, ByteBuffer> resultMap = new HashMap<>();
         try {
             String rawString = new String(bytes, "UTF-8");
             Map<String, String> map = JSON.parseObject(rawString, Map.class);
             for(String key : map.keySet()){
                 byte[] decodeKey = Base64.getDecoder().decode(key);
                 byte[] decodeValue = Base64.getDecoder().decode(map.get(key));
-                resultMap.put(decodeKey, decodeValue);
+                resultMap.put(ByteBuffer.wrap(decodeKey), ByteBuffer.wrap(decodeValue));
             }
             return resultMap;
         } catch (UnsupportedEncodingException e) {

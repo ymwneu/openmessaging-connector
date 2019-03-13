@@ -25,6 +25,7 @@ import io.openmessaging.connect.runtime.common.LoggerName;
 import io.openmessaging.connect.runtime.common.ConnectKeyValue;
 import io.openmessaging.connect.runtime.connectorwrapper.WorkerConnector;
 import io.openmessaging.connect.runtime.connectorwrapper.WorkerSourceTask;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,7 +50,6 @@ public class RestHandler {
         app.get("/connectors/:connectorName/stop", this::handleStopConnector);
         app.get("/getClusterInfo", this::getClusterInfo);
         app.get("/getConfigInfo", this::getConfigInfo);
-        app.get("/getPositionInfo", this::getPositionInfo);
         app.get("/getAllocatedInfo", this::getAllocatedInfo);
     }
 
@@ -67,12 +67,6 @@ public class RestHandler {
             sb.append(workerSourceTask.toString()+"\n");
         }
         context.result(sb.toString());
-    }
-
-    private void getPositionInfo(Context context) {
-
-        Map<byte[], byte[]> positionTable = connectController.getPositionManagementService().getPositionTable();
-        context.result("positionTable:"+JSON.toJSONString(positionTable));
     }
 
     private void getConfigInfo(Context context) {

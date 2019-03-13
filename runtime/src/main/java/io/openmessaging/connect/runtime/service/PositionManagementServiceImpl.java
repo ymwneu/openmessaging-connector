@@ -19,6 +19,7 @@ package io.openmessaging.connect.runtime.service;
 
 import io.openmessaging.MessagingAccessPoint;
 import io.openmessaging.connect.runtime.config.ConnectConfig;
+import io.openmessaging.connect.runtime.converter.ByteBufferConverter;
 import io.openmessaging.connect.runtime.converter.ByteConverter;
 import io.openmessaging.connect.runtime.converter.ByteMapConverter;
 import io.openmessaging.connect.runtime.converter.JsonConverter;
@@ -28,6 +29,7 @@ import io.openmessaging.connect.runtime.utils.FilePathConfigUtil;
 import io.openmessaging.connect.runtime.utils.datasync.BrokerBasedLog;
 import io.openmessaging.connect.runtime.utils.datasync.DataSynchronizer;
 import io.openmessaging.connect.runtime.utils.datasync.DataSynchronizerCallback;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -44,12 +46,12 @@ public class PositionManagementServiceImpl implements PositionManagementService 
     /**
      * Current position info in store.
      */
-    private KeyValueStore<byte[], byte[]> positionStore;
+    private KeyValueStore<ByteBuffer, ByteBuffer> positionStore;
 
     /**
      * Synchronize data with other workers.
      */
-    private DataSynchronizer<String, Map<byte[], byte[]>> dataSynchronizer;
+    private DataSynchronizer<String, Map<ByteBuffer, ByteBuffer>> dataSynchronizer;
 
     /**
      * Listeners.
@@ -60,8 +62,8 @@ public class PositionManagementServiceImpl implements PositionManagementService 
                                          MessagingAccessPoint messagingAccessPoint){
 
         this.positionStore = new FileBaseKeyValueStore<>(FilePathConfigUtil.getPositionPath(connectConfig.getStorePathRootDir()),
-                                                         new ByteConverter(),
-                                                         new ByteConverter());
+                                                         new ByteBufferConverter(),
+                                                         new ByteBufferConverter());
         this.dataSynchronizer = new BrokerBasedLog(messagingAccessPoint,
                                                     POSITION_MESSAGE_TOPIC,
                                                     connectConfig.getWorkerId()+System.currentTimeMillis(),
@@ -93,25 +95,25 @@ public class PositionManagementServiceImpl implements PositionManagementService 
     }
 
     @Override
-    public Map<byte[], byte[]> getPositionTable() {
+    public Map<ByteBuffer, ByteBuffer> getPositionTable() {
 
         return positionStore.getKVMap();
     }
 
     @Override
-    public void putPosition(Map<byte[], byte[]> positions) {
+    public void putPosition(Map<ByteBuffer, ByteBuffer> positions) {
 
         positionStore.putAll(positions);
         sendSynchronizePosition();
     }
 
     @Override
-    public void removePosition(List<byte[]> partitions) {
+    public void removePosition(List<ByteBuffer> partitions) {
 
         if(null == partitions){
              return;
         }
-        for(byte[] partition : partitions){
+        for(ByteBuffer partition : partitions){
             positionStore.remove(partition);
         }
     }
@@ -132,10 +134,10 @@ public class PositionManagementServiceImpl implements PositionManagementService 
         dataSynchronizer.send(PositionChangeEnum.POSITION_CHANG_KEY.name(), positionStore.getKVMap());
     }
 
-    private class PositionChangeCallback implements DataSynchronizerCallback<String, Map<byte[], byte[]>> {
+    private class PositionChangeCallback implements DataSynchronizerCallback<String, Map<ByteBuffer, ByteBuffer>> {
 
         @Override
-        public void onCompletion(Throwable error, String key, Map<byte[], byte[]> result) {
+        public void onCompletion(Throwable error, String key, Map<ByteBuffer, ByteBuffer> result) {
 
             // update positionStore
             PositionManagementServiceImpl.this.persist();
@@ -171,19 +173,19 @@ public class PositionManagementServiceImpl implements PositionManagementService 
      * @param result
      * @return
      */
-    private boolean mergePositionInfo(Map<byte[], byte[]> result) {
+    private boolean mergePositionInfo(Map<ByteBuffer, ByteBuffer> result) {
 
         boolean changed = false;
         if(null == result || 0 == result.size()){
             return changed;
         }
 
-        for(Map.Entry<byte[], byte[]> newEntry : result.entrySet()){
+        for(Map.Entry<ByteBuffer, ByteBuffer> newEntry : result.entrySet()){
             boolean find = false;
-            for(Map.Entry<byte[], byte[]> existedEntry : positionStore.getKVMap().entrySet()){
-                if(Arrays.equals(newEntry.getKey(), existedEntry.getKey())){
+            for(Map.Entry<ByteBuffer, ByteBuffer> existedEntry : positionStore.getKVMap().entrySet()){
+                if(newEntry.getKey().equals(existedEntry.getKey())){
                     find = true;
-                    if(!Arrays.equals(newEntry.getValue(), existedEntry.getValue())){
+                    if(!newEntry.getValue().equals(existedEntry.getValue())){
                         changed = true;
                         existedEntry.setValue(newEntry.getValue());
                     }

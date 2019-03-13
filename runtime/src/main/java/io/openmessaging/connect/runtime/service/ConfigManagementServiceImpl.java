@@ -123,11 +123,8 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
 
         ConnectKeyValue exist = connectorKeyValueStore.get(connectorName);
         if(configs.equals(exist)){
-            return "";
+            return "Connector with same config already exist.";
         }
-        String className = configs.getString(RuntimeConfigDefine.CONNECTOR_CLASS);
-        Class clazz = Class.forName(className);
-        Connector connector = (Connector) clazz.newInstance();
 
         Long currentTimestamp = System.currentTimeMillis();
         configs.put(RuntimeConfigDefine.UPDATE_TIMESATMP, currentTimestamp);
@@ -136,10 +133,16 @@ public class ConfigManagementServiceImpl implements ConfigManagementService {
                 return "Request config key: " + requireConfig;
             }
         }
+
+        String className = configs.getString(RuntimeConfigDefine.CONNECTOR_CLASS);
+        Class clazz = Class.forName(className);
+        Connector connector = (Connector) clazz.newInstance();
+
         String errorMessage = connector.verifyAndSetConfig(configs);
         if(errorMessage != null && errorMessage.length() > 0){
             return errorMessage;
         }
+
         connector.start();
         connectorKeyValueStore.put(connectorName, configs);
         List<KeyValue> taskConfigs = connector.taskConfigs();

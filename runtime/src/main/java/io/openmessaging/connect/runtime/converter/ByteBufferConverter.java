@@ -15,19 +15,22 @@
  *  limitations under the License.
  */
 
-package io.openmessaging.connect.runtime.connectorwrapper.testimpl;
+package io.openmessaging.connect.runtime.converter;
 
 import io.openmessaging.connector.api.data.Converter;
+import java.nio.ByteBuffer;
 
-public class TestConverter implements Converter {
+/**
+ * ByteBuffer converter.
+ */
+public class ByteBufferConverter implements Converter<ByteBuffer> {
 
     @Override
-    public byte[] objectToByte(Object object) {
-        return "test-converter".getBytes();
+    public byte[] objectToByte(ByteBuffer object) {
+        return object.array();
     }
 
-    @Override
-    public Object byteToObject(byte[] bytes) {
-        return null;
+    @Override public ByteBuffer byteToObject(byte[] bytes) {
+        return ByteBuffer.wrap(bytes);
     }
 }
