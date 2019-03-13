@@ -35,21 +35,22 @@ This runtime is based on interface [openmessaging-connector](https://github.com/
 ### Build
 
 ```
-mvn clean install -DskipTests
+mvn clean install -Dmaven.test.skip=true
 ```
 
 ### Run Command Line
 
 ```
-## Start Runtime Worker with default config.
-java -jar runtime/target/ConnectStartup.jar
+## Enter runtime directory
+cd runtime/
 
-## Start Runtime Server with config file.
-java -jar runtime/target/ConnectStartup.jar -c runtime/connect.conf
+## run run_worker.sh
+sh ./run_worker.sh
 ```
 
 ### Log Path
 
+Default path is:
 ```
 ${user.home}/logs/omsconnect/
 ```
