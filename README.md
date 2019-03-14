@@ -69,7 +69,7 @@ You will see all alive workers' id with latest heartbeat timestamp.
 
 Use the following http request, to start a mysql source connector as an example.
 ```
-GET http://(your worker ip):(port)/connectors/(Your connector name)?config={"connector-class":"org.apache.rocketmq.mysql.connector.MysqlConnector","oms-driver-url":"oms:rocketmq://localhost:9876/default:default","mysqlAddr":"localhost","mysqlPort":"3306","mysqlUsername":"username","mysqlPassword":"password","source-record-converter":"io.openmessaging.connect.runtime.converter.JsonConverter"}
+GET http://(your worker ip):(port)/connectors/(Your connector name)?config={"connector-class":"io.openmessaging.mysql.connector.MysqlConnector","oms-driver-url":"oms:rocketmq://localhost:9876/default:default","mysqlAddr":"localhost","mysqlPort":"3306","mysqlUsername":"username","mysqlPassword":"password","source-record-converter":"io.openmessaging.connect.runtime.converter.JsonConverter"}
 ```
 Note to replace the arguments in "()" with your own mysql setting.
 
