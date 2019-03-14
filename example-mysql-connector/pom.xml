@@ -19,7 +19,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>io.openmessaging</groupId>
-        <artifactId>openmessaging-connect</artifactId>
+        <artifactId>openmessaging-odar</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
@@ -73,7 +73,7 @@
         </dependency>
         <dependency>
             <groupId>io.openmessaging</groupId>
-            <artifactId>connector</artifactId>
+            <artifactId>openmessaging-connector</artifactId>
         </dependency>
     </dependencies>
 

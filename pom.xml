@@ -16,17 +16,22 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>9</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
     <groupId>io.openmessaging</groupId>
-    <artifactId>openmessaging-connect</artifactId>
+    <artifactId>openmessaging-odar</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Messaging Connect</name>
+    <name>Messaging Connect Runtime</name>
     <packaging>pom</packaging>
 
     <modules>
-        <module>connector</module>
-        <module>runtime</module>
+        <module>openmessaging-runtime</module>
         <module>example-mysql-connector</module>
     </modules>
 
@@ -186,11 +191,6 @@
         <dependencies>
             <dependency>
                 <groupId>${project.groupId}</groupId>
-                <artifactId>connector</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
                 <artifactId>runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -198,6 +198,11 @@
                 <groupId>${project.groupId}</groupId>
                 <artifactId>example-mysql-connector</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.openmessaging</groupId>
+                <artifactId>openmessaging-connector</artifactId>
+                <version>0.1.0-beta</version>
             </dependency>
             <dependency>
                 <groupId>io.openmessaging</groupId>
